@@ -7,67 +7,182 @@
 <meta charset="UTF-8">
 
 <meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+      content="width=device-width, initial-scale=1.0">
 
-<title>CGomes - Leitor</title>
+<title>CGomes Vendas</title>
 
+<!-- Biblioteca de leitura de código de barras -->
 <script src="https://unpkg.com/html5-qrcode"
-type="text/javascript"></script>
+        type="text/javascript">
+</script>
+
 
 <style>
 
 body {
+
     font-family: Arial, sans-serif;
+
     margin: 0;
+
     padding: 20px;
+
     background: #f3f4f6;
+
 }
+
 
 .caixa {
+
     max-width: 500px;
+
     margin: auto;
+
     background: white;
+
     padding: 20px;
+
     border-radius: 15px;
+
     box-shadow: 0 2px 10px rgba(0,0,0,.10);
+
 }
+
 
 h1 {
+
     text-align: center;
+
+    margin-bottom: 10px;
+
 }
 
-p {
+
+.subtitulo {
+
     text-align: center;
+
+    color: #666;
+
+    margin-bottom: 20px;
+
 }
+
 
 button {
+
     width: 100%;
+
     padding: 16px;
+
     margin-top: 15px;
+
     font-size: 18px;
+
     border: none;
+
     border-radius: 8px;
+
+    cursor: pointer;
+
 }
+
 
 #reader {
+
     margin-top: 20px;
+
 }
+
 
 #resultado {
+
     margin-top: 20px;
+
     padding: 15px;
+
     border-radius: 8px;
-    text-align: center;
-    font-size: 20px;
+
+    font-size: 17px;
+
 }
+
 
 .sucesso {
+
     background: #e5f7e8;
+
 }
 
+
 .erro {
+
     background: #ffe5e5;
+
+    color: #9b0000;
+
 }
+
+
+.info {
+
+    background: #eeeeee;
+
+}
+
+
+.campo {
+
+    margin-top: 15px;
+
+}
+
+
+label {
+
+    display: block;
+
+    font-weight: bold;
+
+    margin-bottom: 6px;
+
+}
+
+
+input {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 13px;
+
+    font-size: 17px;
+
+    border: 1px solid #ccc;
+
+    border-radius: 8px;
+
+}
+
+
+input[readonly] {
+
+    background: #f1f1f1;
+
+}
+
+
+.pequeno {
+
+    font-size: 14px;
+
+    color: #666;
+
+    margin-top: 15px;
+
+}
+
 
 </style>
 
@@ -82,23 +197,32 @@ button {
 
 <h1>CGomes Vendas</h1>
 
-<p>
-Teste do leitor de código de barras
-</p>
+
+<div class="subtitulo">
+
+Leitor de código de barras
+
+</div>
 
 
-<button
-onclick="iniciarLeitor()">
+<!-- BOTÃO PARA INICIAR A CÂMERA -->
+
+<button onclick="iniciarLeitor()">
 
 📷 Ler código de barras
 
 </button>
 
 
+<!-- ÁREA DA CÂMERA -->
+
 <div id="reader"></div>
 
 
-<div id="resultado">
+<!-- RESULTADO -->
+
+<div id="resultado"
+     class="info">
 
 Aguardando leitura...
 
@@ -110,22 +234,72 @@ Aguardando leitura...
 
 <script>
 
+
+/* =====================================================
+   CONFIGURAÇÃO
+   ===================================================== */
+
+
+/*
+   IMPORTANTE:
+
+   COLOQUE AQUI O ENDEREÇO DO SEU GOOGLE APPS SCRIPT.
+
+   O endereço termina normalmente com:
+
+   /exec
+*/
+
+
+const URL_APPS_SCRIPT =
+
+"https://script.google.com/macros/s/AKfycbwd-MCsNCIya2NHxRxV6eMsyQMpZHsvxw5PvsE6O6E4_hg3gw6P63HkwYqiNZ0i_nGsaQ/exec";
+
+
+/* =====================================================
+   VARIÁVEIS
+   ===================================================== */
+
+
 let leitor = null;
+
+let leitorAtivo = false;
+
+
+/* =====================================================
+   INICIAR LEITOR
+   ===================================================== */
 
 
 function iniciarLeitor() {
 
-    document.getElementById("resultado")
-        .innerHTML = "Solicitando acesso à câmera...";
+
+    const resultado =
+        document.getElementById("resultado");
 
 
-    leitor = new Html5Qrcode("reader", {
+    resultado.className = "info";
 
-        formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128
-        ]
 
-    });
+    resultado.innerHTML =
+        "Solicitando acesso à câmera...";
+
+
+    /*
+       Cria o leitor.
+    */
+
+
+    leitor = new Html5Qrcode("reader");
+
+
+    /*
+       Configuração da leitura.
+
+       Estamos permitindo Code 128,
+       que é o padrão usado pelo
+       seu ERP.
+    */
 
 
     const configuracao = {
@@ -133,88 +307,216 @@ function iniciarLeitor() {
         fps: 10,
 
         qrbox: {
-            width: 300,
-            height: 160
-        }
+
+            width: 320,
+
+            height: 180
+
+        },
+
+        formatsToSupport: [
+
+            Html5QrcodeSupportedFormats.CODE_128
+
+        ]
 
     };
+
+
+    /*
+       Abre a câmera traseira
+       do iPhone.
+    */
 
 
     leitor.start(
 
         {
+
             facingMode: "environment"
+
         },
 
         configuracao,
 
+
+        /*
+           ESTA FUNÇÃO É EXECUTADA
+           QUANDO O CÓDIGO É LIDO.
+        */
+
+
         function(codigo) {
 
-    document.getElementById("resultado")
-        .className = "sucesso";
 
-    document.getElementById("resultado")
-        .innerHTML =
-        "<strong>Código lido:</strong><br><br>" +
-        codigo +
-        "<br><br>Consultando produto...";
+            /*
+               Evita múltiplas leituras.
+            */
 
 
-    leitor.stop().then(function() {
+            if (!leitorAtivo) {
 
-        document.getElementById("reader")
-            .innerHTML = "";
+                return;
 
-    });
+            }
 
 
-    buscarProduto(codigo);
+            leitorAtivo = false;
 
-}
+
+            /*
+               Mostra o código encontrado.
+            */
+
+
+            resultado.className =
+                "sucesso";
+
+
+            resultado.innerHTML =
+
+                "<strong>Código lido:</strong><br><br>" +
+
+                codigo +
+
+                "<br><br>" +
+
+                "Consultando produto...";
+
+
+            /*
+               Para a câmera.
+            */
+
+
+            leitor.stop()
+
+                .then(function() {
+
+                    document
+                        .getElementById("reader")
+                        .innerHTML = "";
+
+                })
+
+                .catch(function() {
+
+                    document
+                        .getElementById("reader")
+                        .innerHTML = "";
+
+                });
+
+
+            /*
+               Agora consulta a
+               planilha através do
+               Google Apps Script.
+            */
+
+
+            buscarProduto(codigo);
+
+
+        },
+
+
+        /*
+           Erros durante a procura
+           do código são normais.
+
+           Por isso não mostramos
+           nada aqui.
+        */
+
+
         function(erro) {
 
-            // Ignora erros normais
-            // durante a procura do código.
+            // Não fazer nada.
 
         }
 
+
     )
+
 
     .then(function() {
 
-        document.getElementById("resultado")
-            .innerHTML =
-            "Câmera ativada.<br>" +
+
+        leitorAtivo = true;
+
+
+        resultado.className =
+            "info";
+
+
+        resultado.innerHTML =
+
+            "Câmera ativada.<br><br>" +
+
             "Aponte para o código de barras.";
+
 
     })
 
+
     .catch(function(erro) {
 
-        document.getElementById("resultado")
-            .className = "erro";
+
+        leitorAtivo = false;
 
 
-        document.getElementById("resultado")
-            .innerHTML =
-            "<strong>Não foi possível acessar a câmera.</strong><br><br>" +
-            erro;
+        resultado.className =
+            "erro";
+
+
+        resultado.innerHTML =
+
+            "<strong>Não foi possível acessar a câmera.</strong>" +
+
+            "<br><br>" +
+
+            "Verifique se o navegador tem permissão para usar a câmera.";
+
 
     });
 
+
 }
+
+
+/* =====================================================
+   BUSCAR PRODUTO NA PLANILHA
+   ===================================================== */
+
+
 function buscarProduto(codigo) {
 
-    const urlAppsScript =
-        "https://script.google.com/macros/s/AKfycbwd-MCsNCIya2NHxRxV6eMsyQMpZHsvxw5PvsE6O6E4_hg3gw6P63HkwYqiNZ0i_nGsaQ/exec";
+
+    /*
+       Monta o endereço que será
+       enviado ao Google Apps Script.
+    */
 
 
     const url =
-        urlAppsScript +
+
+        URL_APPS_SCRIPT +
+
         "?acao=buscarProduto" +
+
         "&codigo=" +
+
         encodeURIComponent(codigo) +
+
         "&callback=receberProduto";
+
+
+    /*
+       Criamos um elemento <script>
+       para fazer a comunicação com
+       o Google Apps Script.
+    */
 
 
     const script =
@@ -224,86 +526,313 @@ function buscarProduto(codigo) {
     script.src = url;
 
 
+    /*
+       Coloca o script na página.
+    */
+
+
     document.body.appendChild(script);
+
 
 }
 
 
+/* =====================================================
+   RECEBER RESULTADO DO GOOGLE APPS SCRIPT
+   ===================================================== */
+
+
 function receberProduto(resultado) {
+
+
+    const area =
+        document.getElementById("resultado");
+
+
+    /*
+       Se o produto não foi encontrado.
+    */
+
 
     if (!resultado.encontrado) {
 
-        document.getElementById("resultado")
-            .className = "erro";
+
+        area.className =
+            "erro";
 
 
-        document.getElementById("resultado")
-            .innerHTML =
-            "<strong>Produto não encontrado</strong><br><br>" +
+        area.innerHTML =
+
+            "<strong>Produto não encontrado.</strong>" +
+
+            "<br><br>" +
+
             resultado.mensagem;
+
 
         return;
 
     }
 
 
-    const preco =
-        resultado.preco !== "" &&
-        resultado.preco !== null
-            ? resultado.preco
-            : "";
+    /*
+       Produto encontrado.
+    */
 
 
-    document.getElementById("resultado")
-        .className = "sucesso";
+    area.className =
+        "sucesso";
 
 
-    document.getElementById("resultado")
-        .innerHTML = `
+    /*
+       Se existir preço na planilha,
+       ele será mostrado.
 
-        <strong>Produto encontrado!</strong>
+       Se estiver vazio,
+       o campo ficará vazio.
+    */
 
-        <br><br>
 
-        <label>Código</label>
+    let preco = "";
 
-        <input
-            type="text"
-            value="${resultado.codigo}"
-            readonly>
 
-        <br><br>
+    if (
 
-        <label>Produto</label>
+        resultado.preco !== null &&
 
-        <input
-            type="text"
-            value="${resultado.produto}"
-            readonly>
+        resultado.preco !== undefined &&
 
-        <br><br>
+        resultado.preco !== ""
 
-        <label>Preço</label>
+    ) {
 
-        <input
-            id="preco"
-            type="number"
-            step="0.01"
-            value="${preco}">
+        preco = resultado.preco;
 
-        <br><br>
+    }
 
-        <label>Quantidade</label>
 
-        <input
-            id="quantidade"
-            type="number"
-            min="1"
-            value="1">
+    /*
+       Monta a tela do produto.
+    */
 
-        `;
+
+    area.innerHTML = `
+
+        <strong>✅ Produto encontrado!</strong>
+
+
+        <div class="campo">
+
+            <label>Código</label>
+
+            <input
+
+                type="text"
+
+                value="${escaparHTML(resultado.codigo)}"
+
+                readonly>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>Produto</label>
+
+            <input
+
+                type="text"
+
+                value="${escaparHTML(resultado.produto)}"
+
+                readonly>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>Preço da venda</label>
+
+            <input
+
+                id="preco"
+
+                type="number"
+
+                step="0.01"
+
+                inputmode="decimal"
+
+                value="${preco}">
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>Quantidade</label>
+
+            <input
+
+                id="quantidade"
+
+                type="number"
+
+                min="1"
+
+                step="1"
+
+                value="1">
+
+        </div>
+
+
+        <button onclick="testarEdicao()">
+
+            ✅ Confirmar produto
+
+        </button>
+
+
+        <p class="pequeno">
+
+            O preço veio da planilha, mas pode ser alterado
+            antes da confirmação.
+
+        </p>
+
+    `;
 
 }
+
+
+/* =====================================================
+   TESTAR EDIÇÃO DO PREÇO
+   ===================================================== */
+
+
+function testarEdicao() {
+
+
+    const preco =
+        document.getElementById("preco").value;
+
+
+    const quantidade =
+        document.getElementById("quantidade").value;
+
+
+    const area =
+        document.getElementById("resultado");
+
+
+    area.className =
+        "sucesso";
+
+
+    area.innerHTML = `
+
+        <strong>Produto confirmado!</strong>
+
+        <br><br>
+
+        Preço informado:
+
+        <strong>R$ ${formatarMoeda(preco)}</strong>
+
+        <br><br>
+
+        Quantidade:
+
+        <strong>${quantidade}</strong>
+
+        <br><br>
+
+        <p class="pequeno">
+
+            Neste momento ainda não estamos salvando a venda.
+
+            <br>
+
+            Estamos apenas testando a leitura,
+            consulta e edição do preço.
+
+        </p>
+
+    `;
+
+}
+
+
+/* =====================================================
+   FORMATAR VALOR
+   ===================================================== */
+
+
+function formatarMoeda(valor) {
+
+
+    const numero =
+        Number(valor);
+
+
+    if (isNaN(numero)) {
+
+        return "0,00";
+
+    }
+
+
+    return numero.toLocaleString(
+
+        "pt-BR",
+
+        {
+
+            minimumFractionDigits: 2,
+
+            maximumFractionDigits: 2
+
+        }
+
+    );
+
+}
+
+
+/* =====================================================
+   PROTEGER TEXTO EXIBIDO NA TELA
+   ===================================================== */
+
+
+function escaparHTML(valor) {
+
+
+    if (valor === null ||
+        valor === undefined) {
+
+        return "";
+
+    }
+
+
+    return String(valor)
+
+        .replace(/&/g, "&amp;")
+
+        .replace(/</g, "&lt;")
+
+        .replace(/>/g, "&gt;")
+
+        .replace(/"/g, "&quot;")
+
+        .replace(/'/g, "&#039;");
+
+}
+
+
 </script>
 
 
