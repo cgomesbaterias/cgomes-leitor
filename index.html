@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>CGomes - Leitor</title>
+
+<script src="https://unpkg.com/html5-qrcode"
+type="text/javascript"></script>
+
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f3f4f6;
+}
+
+.caixa {
+    max-width: 500px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.10);
+}
+
+h1 {
+    text-align: center;
+}
+
+p {
+    text-align: center;
+}
+
+button {
+    width: 100%;
+    padding: 16px;
+    margin-top: 15px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+}
+
+#reader {
+    margin-top: 20px;
+}
+
+#resultado {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 20px;
+}
+
+.sucesso {
+    background: #e5f7e8;
+}
+
+.erro {
+    background: #ffe5e5;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="caixa">
+
+
+<h1>CGomes Vendas</h1>
+
+<p>
+Teste do leitor de código de barras
+</p>
+
+
+<button
+onclick="iniciarLeitor()">
+
+📷 Ler código de barras
+
+</button>
+
+
+<div id="reader"></div>
+
+
+<div id="resultado">
+
+Aguardando leitura...
+
+</div>
+
+
+</div>
+
+
+<script>
+
+let leitor = null;
+
+
+function iniciarLeitor() {
+
+    document.getElementById("resultado")
+        .innerHTML = "Solicitando acesso à câmera...";
+
+
+    leitor = new Html5Qrcode("reader", {
+
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+
+    });
+
+
+    const configuracao = {
+
+        fps: 10,
+
+        qrbox: {
+            width: 300,
+            height: 160
+        }
+
+    };
+
+
+    leitor.start(
+
+        {
+            facingMode: "environment"
+        },
+
+        configuracao,
+
+        function(codigo) {
+
+            document.getElementById("resultado")
+                .className = "sucesso";
+
+
+            document.getElementById("resultado")
+                .innerHTML =
+                "<strong>CÓDIGO LIDO:</strong><br><br>" +
+                codigo;
+
+
+            leitor.stop().then(function() {
+
+                document.getElementById("reader")
+                    .innerHTML = "";
+
+            });
+
+        },
+
+        function(erro) {
+
+            // Ignora erros normais
+            // durante a procura do código.
+
+        }
+
+    )
+
+    .then(function() {
+
+        document.getElementById("resultado")
+            .innerHTML =
+            "Câmera ativada.<br>" +
+            "Aponte para o código de barras.";
+
+    })
+
+    .catch(function(erro) {
+
+        document.getElementById("resultado")
+            .className = "erro";
+
+
+        document.getElementById("resultado")
+            .innerHTML =
+            "<strong>Não foi possível acessar a câmera.</strong><br><br>" +
+            erro;
+
+    });
+
+}
+
+</script>
+
+
+</body>
+
+</html>
