@@ -150,25 +150,27 @@ function iniciarLeitor() {
 
         function(codigo) {
 
-            document.getElementById("resultado")
-                .className = "sucesso";
+    document.getElementById("resultado")
+        .className = "sucesso";
+
+    document.getElementById("resultado")
+        .innerHTML =
+        "<strong>Código lido:</strong><br><br>" +
+        codigo +
+        "<br><br>Consultando produto...";
 
 
-            document.getElementById("resultado")
-                .innerHTML =
-                "<strong>CÓDIGO LIDO:</strong><br><br>" +
-                codigo;
+    leitor.stop().then(function() {
+
+        document.getElementById("reader")
+            .innerHTML = "";
+
+    });
 
 
-            leitor.stop().then(function() {
+    buscarProduto(codigo);
 
-                document.getElementById("reader")
-                    .innerHTML = "";
-
-            });
-
-        },
-
+}
         function(erro) {
 
             // Ignora erros normais
@@ -201,7 +203,107 @@ function iniciarLeitor() {
     });
 
 }
+function buscarProduto(codigo) {
 
+    const urlAppsScript =
+        "https://script.google.com/macros/s/AKfycbwd-MCsNCIya2NHxRxV6eMsyQMpZHsvxw5PvsE6O6E4_hg3gw6P63HkwYqiNZ0i_nGsaQ/exec";
+
+
+    const url =
+        urlAppsScript +
+        "?acao=buscarProduto" +
+        "&codigo=" +
+        encodeURIComponent(codigo) +
+        "&callback=receberProduto";
+
+
+    const script =
+        document.createElement("script");
+
+
+    script.src = url;
+
+
+    document.body.appendChild(script);
+
+}
+
+
+function receberProduto(resultado) {
+
+    if (!resultado.encontrado) {
+
+        document.getElementById("resultado")
+            .className = "erro";
+
+
+        document.getElementById("resultado")
+            .innerHTML =
+            "<strong>Produto não encontrado</strong><br><br>" +
+            resultado.mensagem;
+
+        return;
+
+    }
+
+
+    const preco =
+        resultado.preco !== "" &&
+        resultado.preco !== null
+            ? resultado.preco
+            : "";
+
+
+    document.getElementById("resultado")
+        .className = "sucesso";
+
+
+    document.getElementById("resultado")
+        .innerHTML = `
+
+        <strong>Produto encontrado!</strong>
+
+        <br><br>
+
+        <label>Código</label>
+
+        <input
+            type="text"
+            value="${resultado.codigo}"
+            readonly>
+
+        <br><br>
+
+        <label>Produto</label>
+
+        <input
+            type="text"
+            value="${resultado.produto}"
+            readonly>
+
+        <br><br>
+
+        <label>Preço</label>
+
+        <input
+            id="preco"
+            type="number"
+            step="0.01"
+            value="${preco}">
+
+        <br><br>
+
+        <label>Quantidade</label>
+
+        <input
+            id="quantidade"
+            type="number"
+            min="1"
+            value="1">
+
+        `;
+
+}
 </script>
 
 
