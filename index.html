@@ -54,7 +54,7 @@ button {
     cursor: pointer;
 }
 
-.botao-leitura {
+.botao-principal {
     background: #1a73e8;
     color: white;
 }
@@ -64,8 +64,13 @@ button {
     color: white;
 }
 
-.botao-finalizar {
+.botao-continuar {
     background: #137333;
+    color: white;
+}
+
+.botao-confirmar {
+    background: #1a73e8;
     color: white;
 }
 
@@ -110,7 +115,8 @@ label {
     margin-bottom: 6px;
 }
 
-input {
+input,
+select {
     width: 100%;
     box-sizing: border-box;
     padding: 13px;
@@ -163,10 +169,36 @@ input[readonly] {
     text-align: center;
 }
 
-.pequeno {
+.resumo {
+    margin-top: 20px;
+    padding: 18px;
+    background: #f7f7f7;
+    border-radius: 10px;
+}
+
+.destaque {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.usuario {
+    padding: 15px;
+    margin-bottom: 20px;
+    background: #e8f0fe;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.perfil {
     font-size: 14px;
+    color: #555;
+    margin-top: 5px;
+}
+
+.pequeno {
+    font-size: 13px;
     color: #666;
-    margin-top: 15px;
+    margin-top: 8px;
 }
 
 .oculto {
@@ -185,19 +217,87 @@ input[readonly] {
 <h1>CGomes Vendas</h1>
 
 <div class="subtitulo">
-Carrinho de vendas
+Sistema de vendas
 </div>
 
 
 <!-- =================================================
-     LEITURA
+     IDENTIFICAÇÃO DO APARELHO
+================================================= -->
+
+<div id="configuracaoAparelho">
+
+    <h3>📱 Identificação do aparelho</h3>
+
+    <div class="campo">
+
+        <label>
+            Código do aparelho
+        </label>
+
+        <input
+            id="idAparelho"
+            type="text"
+            placeholder="Ex.: CEL001"
+            autocomplete="off">
+
+    </div>
+
+    <button
+        class="botao-confirmar"
+        onclick="confirmarAparelho()">
+
+        Confirmar aparelho
+
+    </button>
+
+    <div id="resultadoDispositivo"
+         class="info"
+         style="margin-top:15px; padding:15px;">
+
+        Informe o código deste celular.
+
+    </div>
+
+</div>
+
+
+<!-- =================================================
+     USUÁRIO IDENTIFICADO
+================================================= -->
+
+<div id="usuarioIdentificado"
+     class="usuario oculto">
+
+    <strong>👤 <span id="nomeUsuario"></span></strong>
+
+    <div class="perfil">
+
+        Perfil:
+        <strong id="perfilUsuario"></strong>
+
+    </div>
+
+</div>
+
+
+<!-- =================================================
+     ÁREA DA VENDA
+================================================= -->
+
+<div id="areaVenda"
+     class="oculto">
+
+
+<!-- =================================================
+     LEITOR
 ================================================= -->
 
 <button
-    class="botao-leitura"
+    class="botao-principal"
     onclick="iniciarLeitor()">
 
-📷 Ler código de barras
+    📷 Ler código de barras
 
 </button>
 
@@ -208,80 +308,84 @@ Carrinho de vendas
 <div id="resultado"
      class="info">
 
-Aguardando leitura...
+    Aguardando leitura...
 
 </div>
 
 
 <!-- =================================================
-     PRODUTO LIDO
+     PRODUTO PENDENTE
 ================================================= -->
 
 <div id="produtoPendente"
      class="produto-pendente oculto">
 
-<h3>Produto encontrado</h3>
+    <h3>Produto encontrado</h3>
 
 
-<div class="campo">
+    <div class="campo">
 
-<label>Código</label>
+        <label>Código</label>
 
-<input
-    id="codigoProduto"
-    type="text"
-    readonly>
+        <input
+            id="codigoProduto"
+            type="text"
+            readonly>
 
-</div>
-
-
-<div class="campo">
-
-<label>Produto</label>
-
-<input
-    id="nomeProduto"
-    type="text"
-    readonly>
-
-</div>
+    </div>
 
 
-<div class="campo">
+    <div class="campo">
 
-<label>Preço da venda</label>
+        <label>Produto</label>
 
-<input
-    id="precoProduto"
-    type="number"
-    step="0.01"
-    inputmode="decimal">
+        <input
+            id="nomeProduto"
+            type="text"
+            readonly>
 
-</div>
-
-
-<div class="campo">
-
-<label>Quantidade</label>
-
-<input
-    id="quantidadeProduto"
-    type="number"
-    min="1"
-    step="1"
-    value="1">
-
-</div>
+    </div>
 
 
-<button
-    class="botao-adicionar"
-    onclick="adicionarAoCarrinho()">
+    <div class="campo">
 
-➕ Adicionar ao carrinho
+        <label>Preço da venda</label>
 
-</button>
+        <input
+            id="precoProduto"
+            type="number"
+            step="0.01"
+            inputmode="decimal">
 
+        <div class="pequeno">
+            O preço cadastrado pode ser alterado
+            livremente nesta venda.
+        </div>
+
+    </div>
+
+
+    <div class="campo">
+
+        <label>Quantidade</label>
+
+        <input
+            id="quantidadeProduto"
+            type="number"
+            min="1"
+            step="1"
+            value="1">
+
+    </div>
+
+
+    <button
+        class="botao-adicionar"
+        onclick="adicionarAoCarrinho()">
+
+        ➕ Adicionar ao carrinho
+
+    </button>
 
 </div>
 
@@ -293,30 +397,159 @@ Aguardando leitura...
 <div id="areaCarrinho"
      class="carrinho">
 
-<h2>🛒 Carrinho</h2>
+    <h2>🛒 Carrinho</h2>
 
 
-<div id="listaCarrinho">
+    <div id="listaCarrinho">
 
-Nenhum produto adicionado.
+        Nenhum produto adicionado.
+
+    </div>
+
+
+    <div id="totalCarrinho"
+         class="total">
+
+        Total dos produtos: R$ 0,00
+
+    </div>
+
 
 </div>
 
 
-<div id="totalCarrinho"
-     class="total">
+<!-- =================================================
+     COMISSÃO / FRETE
+================================================= -->
 
-Total: R$ 0,00
+<div id="areaComissaoFrete"
+     class="resumo oculto">
+
+    <h2 id="tituloComissaoFrete">
+        Comissão/Frete
+    </h2>
+
+
+    <div class="campo">
+
+        <label id="labelComissaoFrete">
+            Valor
+        </label>
+
+        <input
+            id="valorComissaoFrete"
+            type="number"
+            step="0.01"
+            min="0"
+            value="0"
+            inputmode="decimal"
+            oninput="calcularResumoVenda()">
+
+    </div>
+
+
+    <div id="explicacaoComissaoFrete"
+         class="pequeno">
+
+    </div>
+
+</div>
+
+
+<!-- =================================================
+     RESUMO DA VENDA
+================================================= -->
+
+<div id="resumoVenda"
+     class="resumo oculto">
+
+    <h2>📋 Resumo da venda</h2>
+
+
+    <div class="linha">
+
+        <span>
+            Total dos produtos
+        </span>
+
+        <strong id="resumoProdutos">
+            R$ 0,00
+        </strong>
+
+    </div>
+
+
+    <div class="linha"
+         id="linhaFrete">
+
+        <span>
+            Frete
+        </span>
+
+        <strong id="resumoFrete">
+            R$ 0,00
+        </strong>
+
+    </div>
+
+
+    <div class="linha"
+         id="linhaComissao">
+
+        <span>
+            Comissão
+        </span>
+
+        <strong id="resumoComissao">
+            R$ 0,00
+        </strong>
+
+    </div>
+
+
+    <hr>
+
+
+    <div class="linha">
+
+        <span class="destaque">
+            TOTAL A PAGAR
+        </span>
+
+        <strong
+            class="destaque"
+            id="resumoTotalPagar">
+
+            R$ 0,00
+
+        </strong>
+
+    </div>
+
+
+    <div class="linha"
+         id="linhaLiquido">
+
+        <span>
+            Líquido após comissão
+        </span>
+
+        <strong id="resumoLiquido">
+            R$ 0,00
+        </strong>
+
+    </div>
+
 
 </div>
 
 
 <button
     id="botaoContinuar"
-    class="botao-finalizar oculto"
+    class="botao-continuar oculto"
     onclick="continuarVenda()">
 
-➡️ Continuar venda
+    ➡️ Continuar para pagamento
 
 </button>
 
@@ -349,46 +582,438 @@ let leitor = null;
 
 let leitorAtivo = false;
 
-
-/*
-   Produtos que já foram adicionados
-   à venda.
-*/
-
 let carrinho = [];
-
-
-/*
-   Produto que acabou de ser lido
-   e ainda não foi adicionado.
-*/
 
 let produtoPendente = null;
 
+let usuarioAtual = null;
+
 
 /* =================================================
-   INICIAR LEITOR
+   INICIALIZAÇÃO
 ================================================= */
 
+window.onload = function() {
+
+    verificarAparelhoSalvo();
+
+};
+
+
+/* =================================================
+   VERIFICAR APARELHO SALVO
+================================================= */
+
+function verificarAparelhoSalvo() {
+
+
+    const idSalvo =
+        localStorage.getItem(
+            "CGOMES_ID_APARELHO"
+        );
+
+
+    if (!idSalvo) {
+
+        return;
+
+    }
+
+
+    document
+        .getElementById("idAparelho")
+        .value = idSalvo;
+
+
+    consultarDispositivo(idSalvo);
+
+}
+
+
+/* =================================================
+   CONFIRMAR APARELHO
+================================================= */
+
+function confirmarAparelho() {
+
+
+    const id =
+        document
+            .getElementById("idAparelho")
+            .value
+            .trim();
+
+
+    if (!id) {
+
+        mostrarResultadoDispositivo(
+
+            false,
+
+            "Informe o código do aparelho."
+
+        );
+
+        return;
+
+    }
+
+
+    consultarDispositivo(id);
+
+}
+
+
+/* =================================================
+   CONSULTAR DISPOSITIVO
+================================================= */
+
+function consultarDispositivo(id) {
+
+
+    mostrarResultadoDispositivo(
+
+        null,
+
+        "Verificando aparelho..."
+
+    );
+
+
+    const url =
+
+        URL_APPS_SCRIPT +
+
+        "?acao=buscarDispositivo" +
+
+        "&idAparelho=" +
+
+        encodeURIComponent(id) +
+
+        "&callback=receberDispositivo";
+
+
+    const script =
+        document.createElement("script");
+
+
+    script.src = url;
+
+
+    document.body.appendChild(script);
+
+
+}
+
+
+/* =================================================
+   RECEBER DISPOSITIVO
+================================================= */
+
+function receberDispositivo(resultado) {
+
+
+    if (
+        !resultado ||
+        !resultado.sucesso
+    ) {
+
+
+        mostrarResultadoDispositivo(
+
+            false,
+
+            resultado &&
+            resultado.mensagem
+
+                ? resultado.mensagem
+
+                : "Aparelho não encontrado."
+
+        );
+
+
+        document
+            .getElementById("usuarioIdentificado")
+            .classList
+            .add("oculto");
+
+
+        document
+            .getElementById("areaVenda")
+            .classList
+            .add("oculto");
+
+
+        return;
+
+    }
+
+
+    /*
+       Guarda o aparelho no celular.
+    */
+
+
+    localStorage.setItem(
+
+        "CGOMES_ID_APARELHO",
+
+        resultado.idAparelho
+
+    );
+
+
+    /*
+       Guarda os dados do usuário.
+    */
+
+
+    usuarioAtual = {
+
+        idAparelho:
+            resultado.idAparelho,
+
+        usuario:
+            resultado.usuario,
+
+        perfil:
+            String(resultado.perfil)
+                .toUpperCase()
+
+    };
+
+
+    /*
+       Mostra o usuário.
+    */
+
+
+    document
+        .getElementById("nomeUsuario")
+        .textContent =
+        usuarioAtual.usuario;
+
+
+    document
+        .getElementById("perfilUsuario")
+        .textContent =
+        usuarioAtual.perfil;
+
+
+    document
+        .getElementById("usuarioIdentificado")
+        .classList
+        .remove("oculto");
+
+
+    /*
+       Esconde a configuração.
+    */
+
+
+    document
+        .getElementById("configuracaoAparelho")
+        .classList
+        .add("oculto");
+
+
+    /*
+       Libera a venda.
+    */
+
+
+    document
+        .getElementById("areaVenda")
+        .classList
+        .remove("oculto");
+
+
+    /*
+       Configura Comissão ou Frete.
+    */
+
+
+    configurarComissaoFrete();
+
+
+    mostrarResultadoDispositivo(
+
+        true,
+
+        "Aparelho identificado com sucesso."
+
+    );
+
+}
+
+
+/* =================================================
+   CONFIGURAR COMISSÃO / FRETE
+================================================= */
+
+function configurarComissaoFrete() {
+
+
+    const area =
+        document.getElementById(
+            "areaComissaoFrete"
+        );
+
+
+    const titulo =
+        document.getElementById(
+            "tituloComissaoFrete"
+        );
+
+
+    const label =
+        document.getElementById(
+            "labelComissaoFrete"
+        );
+
+
+    const explicacao =
+        document.getElementById(
+            "explicacaoComissaoFrete"
+        );
+
+
+    const linhaFrete =
+        document.getElementById(
+            "linhaFrete"
+        );
+
+
+    const linhaComissao =
+        document.getElementById(
+            "linhaComissao"
+        );
+
+
+    const linhaLiquido =
+        document.getElementById(
+            "linhaLiquido"
+        );
+
+
+    /*
+       Área aparece somente
+       depois da identificação.
+    */
+
+
+    area.classList.remove("oculto");
+
+
+    if (
+        usuarioAtual.perfil ===
+        "VENDEDOR"
+    ) {
+
+
+        titulo.textContent =
+            "💰 Comissão do vendedor";
+
+
+        label.textContent =
+            "Valor da comissão";
+
+
+        explicacao.textContent =
+
+            "A comissão será descontada " +
+            "do valor da venda. " +
+            "Não aumenta o valor pago pelo cliente.";
+
+
+        linhaFrete.classList.add("oculto");
+
+
+        linhaComissao.classList.remove("oculto");
+
+
+        linhaLiquido.classList.remove("oculto");
+
+
+    }
+
+
+    else if (
+        usuarioAtual.perfil ===
+        "ENTREGADOR"
+    ) {
+
+
+        titulo.textContent =
+            "🚚 Frete";
+
+
+        label.textContent =
+            "Valor do frete";
+
+
+        explicacao.textContent =
+
+            "O frete será acrescentado " +
+            "ao valor dos produtos e cobrado " +
+            "do cliente.";
+
+
+        linhaFrete.classList.remove("oculto");
+
+
+        linhaComissao.classList.add("oculto");
+
+
+        linhaLiquido.classList.add("oculto");
+
+
+    }
+
+
+    else {
+
+
+        titulo.textContent =
+            "Comissão/Frete";
+
+
+        label.textContent =
+            "Valor";
+
+
+        explicacao.textContent =
+            "";
+
+
+    }
+
+
+    calcularResumoVenda();
+
+}
+
+
+/* =================================================
+   LEITOR
+================================================= */
 
 function iniciarLeitor() {
 
 
     const resultado =
-        document.getElementById("resultado");
+        document.getElementById(
+            "resultado"
+        );
 
 
-    resultado.className = "info";
+    resultado.className =
+        "info";
 
 
     resultado.innerHTML =
         "Solicitando acesso à câmera...";
-
-
-    /*
-       Se já houver leitor aberto,
-       não cria outro.
-    */
 
 
     if (leitorAtivo) {
@@ -489,8 +1114,7 @@ function iniciarLeitor() {
         function(erro) {
 
             /*
-               Erros durante a procura
-               são ignorados.
+               Erros de procura são ignorados.
             */
 
         }
@@ -533,7 +1157,7 @@ function iniciarLeitor() {
 
             "<br><br>" +
 
-            "Verifique a permissão da câmera no iPhone.";
+            "Verifique a permissão da câmera.";
 
     });
 
@@ -543,7 +1167,6 @@ function iniciarLeitor() {
 /* =================================================
    BUSCAR PRODUTO
 ================================================= */
-
 
 function buscarProduto(codigo) {
 
@@ -577,12 +1200,13 @@ function buscarProduto(codigo) {
    RECEBER PRODUTO
 ================================================= */
 
-
 function receberProduto(resultado) {
 
 
     const area =
-        document.getElementById("resultado");
+        document.getElementById(
+            "resultado"
+        );
 
 
     if (!resultado.encontrado) {
@@ -606,41 +1230,37 @@ function receberProduto(resultado) {
     }
 
 
-    /*
-       Guarda o produto temporariamente.
-    */
-
-
     produtoPendente = resultado;
 
 
-    /*
-       Preenche os campos.
-    */
-
-
-    document.getElementById("codigoProduto").value =
+    document
+        .getElementById("codigoProduto")
+        .value =
         resultado.codigo;
 
 
-    document.getElementById("nomeProduto").value =
+    document
+        .getElementById("nomeProduto")
+        .value =
         resultado.produto;
 
 
-    document.getElementById("precoProduto").value =
+    document
+        .getElementById("precoProduto")
+        .value =
+
         resultado.preco !== null &&
         resultado.preco !== undefined
+
             ? resultado.preco
+
             : "";
 
 
-    document.getElementById("quantidadeProduto").value =
+    document
+        .getElementById("quantidadeProduto")
+        .value =
         1;
-
-
-    /*
-       Mostra o produto.
-    */
 
 
     document
@@ -666,7 +1286,6 @@ function receberProduto(resultado) {
    ADICIONAR AO CARRINHO
 ================================================= */
 
-
 function adicionarAoCarrinho() {
 
 
@@ -683,20 +1302,26 @@ function adicionarAoCarrinho() {
 
     const codigo =
         document
-            .getElementById("codigoProduto")
+            .getElementById(
+                "codigoProduto"
+            )
             .value;
 
 
     const produto =
         document
-            .getElementById("nomeProduto")
+            .getElementById(
+                "nomeProduto"
+            )
             .value;
 
 
     const preco =
         Number(
             document
-                .getElementById("precoProduto")
+                .getElementById(
+                    "precoProduto"
+                )
                 .value
         );
 
@@ -704,14 +1329,11 @@ function adicionarAoCarrinho() {
     const quantidade =
         Number(
             document
-                .getElementById("quantidadeProduto")
+                .getElementById(
+                    "quantidadeProduto"
+                )
                 .value
         );
-
-
-    /*
-       Validação do preço.
-    */
 
 
     if (
@@ -728,11 +1350,6 @@ function adicionarAoCarrinho() {
     }
 
 
-    /*
-       Validação da quantidade.
-    */
-
-
     if (
         isNaN(quantidade) ||
         quantidade <= 0
@@ -745,11 +1362,6 @@ function adicionarAoCarrinho() {
         return;
 
     }
-
-
-    /*
-       Adiciona o produto.
-    */
 
 
     carrinho.push({
@@ -768,35 +1380,32 @@ function adicionarAoCarrinho() {
     });
 
 
-    /*
-       Limpa o produto pendente.
-    */
-
-
     produtoPendente = null;
 
 
     document
-        .getElementById("produtoPendente")
+        .getElementById(
+            "produtoPendente"
+        )
         .classList
         .add("oculto");
 
 
     document
-        .getElementById("resultado")
-        .className = "sucesso";
+        .getElementById(
+            "resultado"
+        )
+        .className =
+        "sucesso";
 
 
     document
-        .getElementById("resultado")
+        .getElementById(
+            "resultado"
+        )
         .innerHTML =
 
         "✅ Produto adicionado ao carrinho.";
-
-
-    /*
-       Atualiza o carrinho.
-    */
 
 
     atualizarCarrinho();
@@ -808,15 +1417,18 @@ function adicionarAoCarrinho() {
    ATUALIZAR CARRINHO
 ================================================= */
 
-
 function atualizarCarrinho() {
 
 
     const lista =
-        document.getElementById("listaCarrinho");
+        document.getElementById(
+            "listaCarrinho"
+        );
 
 
-    if (carrinho.length === 0) {
+    if (
+        carrinho.length === 0
+    ) {
 
 
         lista.innerHTML =
@@ -824,13 +1436,25 @@ function atualizarCarrinho() {
 
 
         document
-            .getElementById("totalCarrinho")
+            .getElementById(
+                "totalCarrinho"
+            )
             .innerHTML =
-            "Total: R$ 0,00";
+            "Total dos produtos: R$ 0,00";
 
 
         document
-            .getElementById("botaoContinuar")
+            .getElementById(
+                "resumoVenda"
+            )
+            .classList
+            .add("oculto");
+
+
+        document
+            .getElementById(
+                "botaoContinuar"
+            )
             .classList
             .add("oculto");
 
@@ -845,101 +1469,117 @@ function atualizarCarrinho() {
     let total = 0;
 
 
-    carrinho.forEach(function(item, indice) {
+    carrinho.forEach(
+
+        function(item, indice) {
 
 
-        const subtotal =
-            item.preco *
-            item.quantidade;
+            const subtotal =
+                item.preco *
+                item.quantidade;
 
 
-        item.subtotal =
-            subtotal;
+            item.subtotal =
+                subtotal;
 
 
-        total += subtotal;
+            total += subtotal;
 
 
-        html += `
+            html += `
 
-            <div class="item-carrinho">
-
-                <strong>
-                    ${indice + 1}. ${escaparHTML(item.produto)}
-                </strong>
-
-                <br><br>
-
-                Código:
-                ${escaparHTML(item.codigo)}
-
-                <div class="linha">
-
-                    <span>
-                        Quantidade:
-                    </span>
+                <div class="item-carrinho">
 
                     <strong>
-                        ${item.quantidade}
+                        ${escaparHTML(item.produto)}
                     </strong>
+
+                    <br><br>
+
+                    Código:
+                    ${escaparHTML(item.codigo)}
+
+                    <div class="linha">
+
+                        <span>
+                            Quantidade:
+                        </span>
+
+                        <strong>
+                            ${item.quantidade}
+                        </strong>
+
+                    </div>
+
+                    <div class="linha">
+
+                        <span>
+                            Preço:
+                        </span>
+
+                        <strong>
+                            R$ ${formatarMoeda(item.preco)}
+                        </strong>
+
+                    </div>
+
+                    <div class="linha">
+
+                        <span>
+                            Subtotal:
+                        </span>
+
+                        <strong>
+                            R$ ${formatarMoeda(subtotal)}
+                        </strong>
+
+                    </div>
+
+                    <button
+                        class="botao-excluir"
+                        onclick="removerProduto(${indice})">
+
+                        🗑️ Excluir
+
+                    </button>
 
                 </div>
 
+            `;
 
-                <div class="linha">
+        }
 
-                    <span>
-                        Preço:
-                    </span>
-
-                    <strong>
-                        R$ ${formatarMoeda(item.preco)}
-                    </strong>
-
-                </div>
-
-
-                <div class="linha">
-
-                    <span>
-                        Subtotal:
-                    </span>
-
-                    <strong>
-                        R$ ${formatarMoeda(subtotal)}
-                    </strong>
-
-                </div>
-
-
-                <button
-                    class="botao-excluir"
-                    onclick="removerProduto(${indice})">
-
-                    🗑️ Excluir
-
-                </button>
-
-            </div>
-
-        `;
-
-    });
+    );
 
 
     lista.innerHTML = html;
 
 
     document
-        .getElementById("totalCarrinho")
+        .getElementById(
+            "totalCarrinho"
+        )
         .innerHTML =
 
-        "Total: R$ " +
+        "Total dos produtos: R$ " +
         formatarMoeda(total);
 
 
+    calcularResumoVenda();
+
+
     document
-        .getElementById("botaoContinuar")
+        .getElementById(
+            "resumoVenda"
+        )
+        .classList
+        .remove("oculto");
+
+
+    document
+        .getElementById(
+            "botaoContinuar"
+        )
         .classList
         .remove("oculto");
 
@@ -950,37 +1590,41 @@ function atualizarCarrinho() {
    REMOVER PRODUTO
 ================================================= */
 
-
 function removerProduto(indice) {
 
 
-    carrinho.splice(indice, 1);
+    carrinho.splice(
+        indice,
+        1
+    );
 
 
     atualizarCarrinho();
-
 
 }
 
 
 /* =================================================
-   TOTAL DA VENDA
+   TOTAL DOS PRODUTOS
 ================================================= */
 
-
-function obterTotalVenda() {
+function obterTotalProdutos() {
 
 
     let total = 0;
 
 
-    carrinho.forEach(function(item) {
+    carrinho.forEach(
 
-        total +=
-            item.preco *
-            item.quantidade;
+        function(item) {
 
-    });
+            total +=
+                item.preco *
+                item.quantidade;
+
+        }
+
+    );
 
 
     return total;
@@ -989,51 +1633,276 @@ function obterTotalVenda() {
 
 
 /* =================================================
-   CONTINUAR VENDA
+   CALCULAR RESUMO
 ================================================= */
 
-
-function continuarVenda() {
-
-
-    if (carrinho.length === 0) {
+function calcularResumoVenda() {
 
 
-        alert(
-            "Adicione pelo menos um produto."
-        );
-
+    if (
+        !usuarioAtual ||
+        carrinho.length === 0
+    ) {
 
         return;
 
     }
 
 
-    const total =
-        obterTotalVenda();
+    const totalProdutos =
+        obterTotalProdutos();
+
+
+    const valor =
+        Number(
+            document
+                .getElementById(
+                    "valorComissaoFrete"
+                )
+                .value
+        ) || 0;
+
+
+    const perfil =
+        usuarioAtual.perfil;
+
+
+    document
+        .getElementById(
+            "resumoProdutos"
+        )
+        .textContent =
+
+        "R$ " +
+        formatarMoeda(
+            totalProdutos
+        );
+
+
+    if (
+        perfil === "ENTREGADOR"
+    ) {
+
+
+        /*
+           FRETE:
+           soma ao valor cobrado.
+        */
+
+
+        const totalPagar =
+            totalProdutos +
+            valor;
+
+
+        document
+            .getElementById(
+                "resumoFrete"
+            )
+            .textContent =
+
+            "R$ " +
+            formatarMoeda(valor);
+
+
+        document
+            .getElementById(
+                "resumoTotalPagar"
+            )
+            .textContent =
+
+            "R$ " +
+            formatarMoeda(
+                totalPagar
+            );
+
+    }
+
+
+    else if (
+        perfil === "VENDEDOR"
+    ) {
+
+
+        /*
+           COMISSÃO:
+           NÃO altera o valor pago
+           pelo cliente.
+        */
+
+
+        const totalPagar =
+            totalProdutos;
+
+
+        const liquido =
+            totalProdutos -
+            valor;
+
+
+        document
+            .getElementById(
+                "resumoComissao"
+            )
+            .textContent =
+
+            "R$ " +
+            formatarMoeda(valor);
+
+
+        document
+            .getElementById(
+                "resumoTotalPagar"
+            )
+            .textContent =
+
+            "R$ " +
+            formatarMoeda(
+                totalPagar
+            );
+
+
+        document
+            .getElementById(
+                "resumoLiquido"
+            )
+            .textContent =
+
+            "R$ " +
+            formatarMoeda(
+                liquido
+            );
+
+    }
+
+
+}
+
+
+/* =================================================
+   CONTINUAR VENDA
+================================================= */
+
+function continuarVenda() {
+
+
+    if (
+        carrinho.length === 0
+    ) {
+
+        alert(
+            "Adicione pelo menos um produto."
+        );
+
+        return;
+
+    }
+
+
+    calcularResumoVenda();
+
+
+    const totalProdutos =
+        obterTotalProdutos();
+
+
+    const valor =
+        Number(
+            document
+                .getElementById(
+                    "valorComissaoFrete"
+                )
+                .value
+        ) || 0;
+
+
+    let totalPagar =
+        totalProdutos;
+
+
+    if (
+        usuarioAtual.perfil ===
+        "ENTREGADOR"
+    ) {
+
+        totalPagar =
+            totalProdutos +
+            valor;
+
+    }
 
 
     alert(
 
-        "Carrinho pronto!\n\n" +
+        "Venda preparada!\n\n" +
 
-        "Produtos: " +
-        carrinho.length +
+        "Usuário: " +
+        usuarioAtual.usuario +
 
-        "\n\n" +
-
-        "Total: R$ " +
-        formatarMoeda(total) +
+        "\nPerfil: " +
+        usuarioAtual.perfil +
 
         "\n\n" +
 
-        "Na próxima etapa vamos adicionar " +
+        "Total a pagar: R$ " +
+        formatarMoeda(
+            totalPagar
+        ) +
 
-        "Vendedor/Entregador, Comissão/Frete " +
+        "\n\n" +
 
-        "e os pagamentos múltiplos."
+        "A próxima etapa será o " +
+        "controle dos pagamentos."
 
     );
+
+}
+
+
+/* =================================================
+   MENSAGEM DO DISPOSITIVO
+================================================= */
+
+function mostrarResultadoDispositivo(
+    sucesso,
+    mensagem
+) {
+
+
+    const area =
+        document.getElementById(
+            "resultadoDispositivo"
+        );
+
+
+    if (
+        sucesso === true
+    ) {
+
+        area.className =
+            "sucesso";
+
+    }
+
+    else if (
+        sucesso === false
+    ) {
+
+        area.className =
+            "erro";
+
+    }
+
+    else {
+
+        area.className =
+            "info";
+
+    }
+
+
+    area.innerHTML =
+        mensagem;
 
 }
 
@@ -1042,7 +1911,6 @@ function continuarVenda() {
    FORMATAR MOEDA
 ================================================= */
 
-
 function formatarMoeda(valor) {
 
 
@@ -1050,7 +1918,9 @@ function formatarMoeda(valor) {
         Number(valor);
 
 
-    if (isNaN(numero)) {
+    if (
+        isNaN(numero)
+    ) {
 
         return "0,00";
 
@@ -1078,7 +1948,6 @@ function formatarMoeda(valor) {
    ESCAPAR HTML
 ================================================= */
 
-
 function escaparHTML(valor) {
 
 
@@ -1094,18 +1963,32 @@ function escaparHTML(valor) {
 
     return String(valor)
 
-        .replace(/&/g, "&amp;")
+        .replace(
+            /&/g,
+            "&amp;"
+        )
 
-        .replace(/</g, "&lt;")
+        .replace(
+            /</g,
+            "&lt;"
+        )
 
-        .replace(/>/g, "&gt;")
+        .replace(
+            />/g,
+            "&gt;"
+        )
 
-        .replace(/"/g, "&quot;")
+        .replace(
+            /"/g,
+            "&quot;"
+        )
 
-        .replace(/'/g, "&#039;");
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
-
 
 </script>
 
