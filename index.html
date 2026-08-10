@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 
 <head>
@@ -44,6 +43,10 @@ h1 {
     margin-bottom: 20px;
 }
 
+h2 {
+    margin-top: 25px;
+}
+
 button {
     width: 100%;
     padding: 15px;
@@ -74,12 +77,27 @@ button {
     color: white;
 }
 
+.botao-finalizar {
+    background: #188038;
+    color: white;
+    font-size: 19px;
+    font-weight: bold;
+}
+
 .botao-excluir {
     background: #d93025;
     color: white;
     width: auto;
     padding: 8px 12px;
     font-size: 14px;
+}
+
+.botao-remover-pagamento {
+    background: #d93025;
+    color: white;
+    width: auto;
+    padding: 7px 10px;
+    font-size: 13px;
 }
 
 #reader {
@@ -202,7 +220,76 @@ input[readonly] {
 }
 
 .oculto {
-    display: none;
+    display: none !important;
+}
+
+
+/* ==============================
+   PAGAMENTOS
+============================== */
+
+.area-pagamentos {
+    margin-top: 25px;
+    padding: 18px;
+    background: #eef5ff;
+    border-radius: 12px;
+    border: 1px solid #d0e2ff;
+}
+
+.pagamento-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+}
+
+.pagamento-forma {
+    font-weight: bold;
+    font-size: 17px;
+}
+
+.pagamento-valor {
+    font-size: 18px;
+    margin-top: 6px;
+}
+
+.restante {
+    margin-top: 15px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.restante-valor {
+    font-size: 25px;
+    font-weight: bold;
+    margin-top: 6px;
+}
+
+.pagamento-ok {
+    background: #e5f7e8;
+    border: 1px solid #b7dfbd;
+}
+
+.pagamento-pendente {
+    background: #fff8e1;
+    border: 1px solid #f0d98c;
+}
+
+.fiado-box {
+    margin-top: 15px;
+    padding: 15px;
+    background: #fff8e1;
+    border-radius: 10px;
+    border: 1px solid #f0d98c;
+}
+
+.total-pagamentos {
+    margin-top: 15px;
+    font-size: 18px;
+    font-weight: bold;
 }
 
 </style>
@@ -221,9 +308,9 @@ Sistema de vendas
 </div>
 
 
-<!-- =================================================
+<!-- =========================================
      IDENTIFICAÇÃO DO APARELHO
-================================================= -->
+========================================= -->
 
 <div id="configuracaoAparelho">
 
@@ -262,14 +349,16 @@ Sistema de vendas
 </div>
 
 
-<!-- =================================================
-     USUÁRIO IDENTIFICADO
-================================================= -->
+<!-- =========================================
+     USUÁRIO
+========================================= -->
 
 <div id="usuarioIdentificado"
      class="usuario oculto">
 
-    <strong>👤 <span id="nomeUsuario"></span></strong>
+    <strong>
+        👤 <span id="nomeUsuario"></span>
+    </strong>
 
     <div class="perfil">
 
@@ -281,17 +370,13 @@ Sistema de vendas
 </div>
 
 
-<!-- =================================================
+<!-- =========================================
      ÁREA DA VENDA
-================================================= -->
+========================================= -->
 
 <div id="areaVenda"
      class="oculto">
 
-
-<!-- =================================================
-     LEITOR
-================================================= -->
 
 <button
     class="botao-principal"
@@ -313,9 +398,9 @@ Sistema de vendas
 </div>
 
 
-<!-- =================================================
-     PRODUTO PENDENTE
-================================================= -->
+<!-- =========================================
+     PRODUTO
+========================================= -->
 
 <div id="produtoPendente"
      class="produto-pendente oculto">
@@ -390,9 +475,9 @@ Sistema de vendas
 </div>
 
 
-<!-- =================================================
+<!-- =========================================
      CARRINHO
-================================================= -->
+========================================= -->
 
 <div id="areaCarrinho"
      class="carrinho">
@@ -414,13 +499,12 @@ Sistema de vendas
 
     </div>
 
-
 </div>
 
 
-<!-- =================================================
+<!-- =========================================
      COMISSÃO / FRETE
-================================================= -->
+========================================= -->
 
 <div id="areaComissaoFrete"
      class="resumo oculto">
@@ -450,15 +534,14 @@ Sistema de vendas
 
     <div id="explicacaoComissaoFrete"
          class="pequeno">
-
     </div>
 
 </div>
 
 
-<!-- =================================================
+<!-- =========================================
      RESUMO DA VENDA
-================================================= -->
+========================================= -->
 
 <div id="resumoVenda"
      class="resumo oculto">
@@ -540,7 +623,6 @@ Sistema de vendas
 
     </div>
 
-
 </div>
 
 
@@ -554,8 +636,187 @@ Sistema de vendas
 </button>
 
 
+<!-- =========================================
+     PAGAMENTOS
+========================================= -->
+
+<div id="areaPagamentos"
+     class="area-pagamentos oculto">
+
+    <h2>💳 Pagamento</h2>
+
+
+    <div class="resumo">
+
+        <div class="linha">
+
+            <span>
+                Total da venda
+            </span>
+
+            <strong id="pagamentoTotalVenda">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+
+        <div class="linha">
+
+            <span>
+                Total já informado
+            </span>
+
+            <strong id="pagamentoTotalInformado">
+                R$ 0,00
+            </strong>
+
+        </div>
+
+
+        <div class="restante">
+
+            <div>
+                RESTANTE
+            </div>
+
+            <div
+                id="pagamentoRestante"
+                class="restante-valor">
+
+                R$ 0,00
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- NOVO PAGAMENTO -->
+
+    <div id="novoPagamento">
+
+        <h3>Adicionar pagamento</h3>
+
+
+        <div class="campo">
+
+            <label>
+                Forma de pagamento
+            </label>
+
+            <select id="formaPagamento"
+                    onchange="alterarFormaPagamento()">
+
+                <option value="">
+                    Selecione
+                </option>
+
+                <option value="PROPIG">
+                    PROPIG
+                </option>
+
+                <option value="REDE">
+                    REDE
+                </option>
+
+                <option value="PIX">
+                    PIX
+                </option>
+
+                <option value="DINHEIRO">
+                    DINHEIRO
+                </option>
+
+                <option value="PERMUTA">
+                    PERMUTA
+                </option>
+
+                <option value="FIADO">
+                    FIADO
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div id="campoClienteFiado"
+             class="fiado-box oculto">
+
+            <label>
+                Cliente do FIADO
+            </label>
+
+            <input
+                id="clienteFiado"
+                type="text"
+                placeholder="Nome ou identificação do cliente">
+
+            <div class="pequeno">
+                Informe o cliente somente quando
+                houver valor FIADO.
+            </div>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                Valor
+            </label>
+
+            <input
+                id="valorPagamento"
+                type="number"
+                step="0.01"
+                min="0"
+                inputmode="decimal"
+                placeholder="0,00">
+
+        </div>
+
+
+        <button
+            class="botao-adicionar"
+            onclick="adicionarPagamento()">
+
+            ➕ Adicionar pagamento
+
+        </button>
+
+    </div>
+
+
+    <!-- LISTA DE PAGAMENTOS -->
+
+    <div id="listaPagamentos">
+
+    </div>
+
+
+    <div
+        id="mensagemPagamento"
+        class="restante">
+
+    </div>
+
+
+    <button
+        id="botaoFinalizar"
+        class="botao-finalizar oculto"
+        onclick="finalizarVenda()">
+
+        🟢 FINALIZAR VENDA
+
+    </button>
+
 </div>
 
+
+</div>
 
 </div>
 
@@ -563,20 +824,18 @@ Sistema de vendas
 <script>
 
 
-/* =================================================
+/* =========================================
    CONFIGURAÇÃO
-================================================= */
-
+========================================= */
 
 const URL_APPS_SCRIPT =
 
 "https://script.google.com/macros/s/AKfycbwd-MCsNCIya2NHxRxV6eMsyQMpZHsvxw5PvsE6O6E4_hg3gw6P63HkwYqiNZ0i_nGsaQ/exec";
 
 
-/* =================================================
+/* =========================================
    VARIÁVEIS
-================================================= */
-
+========================================= */
 
 let leitor = null;
 
@@ -588,10 +847,12 @@ let produtoPendente = null;
 
 let usuarioAtual = null;
 
+let pagamentos = [];
 
-/* =================================================
+
+/* =========================================
    INICIALIZAÇÃO
-================================================= */
+========================================= */
 
 window.onload = function() {
 
@@ -600,9 +861,9 @@ window.onload = function() {
 };
 
 
-/* =================================================
-   VERIFICAR APARELHO SALVO
-================================================= */
+/* =========================================
+   APARELHO SALVO
+========================================= */
 
 function verificarAparelhoSalvo() {
 
@@ -630,9 +891,9 @@ function verificarAparelhoSalvo() {
 }
 
 
-/* =================================================
+/* =========================================
    CONFIRMAR APARELHO
-================================================= */
+========================================= */
 
 function confirmarAparelho() {
 
@@ -664,9 +925,9 @@ function confirmarAparelho() {
 }
 
 
-/* =================================================
+/* =========================================
    CONSULTAR DISPOSITIVO
-================================================= */
+========================================= */
 
 function consultarDispositivo(id) {
 
@@ -702,13 +963,12 @@ function consultarDispositivo(id) {
 
     document.body.appendChild(script);
 
-
 }
 
 
-/* =================================================
+/* =========================================
    RECEBER DISPOSITIVO
-================================================= */
+========================================= */
 
 function receberDispositivo(resultado) {
 
@@ -750,11 +1010,6 @@ function receberDispositivo(resultado) {
     }
 
 
-    /*
-       Guarda o aparelho no celular.
-    */
-
-
     localStorage.setItem(
 
         "CGOMES_ID_APARELHO",
@@ -762,11 +1017,6 @@ function receberDispositivo(resultado) {
         resultado.idAparelho
 
     );
-
-
-    /*
-       Guarda os dados do usuário.
-    */
 
 
     usuarioAtual = {
@@ -782,11 +1032,6 @@ function receberDispositivo(resultado) {
                 .toUpperCase()
 
     };
-
-
-    /*
-       Mostra o usuário.
-    */
 
 
     document
@@ -807,31 +1052,16 @@ function receberDispositivo(resultado) {
         .remove("oculto");
 
 
-    /*
-       Esconde a configuração.
-    */
-
-
     document
         .getElementById("configuracaoAparelho")
         .classList
         .add("oculto");
 
 
-    /*
-       Libera a venda.
-    */
-
-
     document
         .getElementById("areaVenda")
         .classList
         .remove("oculto");
-
-
-    /*
-       Configura Comissão ou Frete.
-    */
 
 
     configurarComissaoFrete();
@@ -848,9 +1078,9 @@ function receberDispositivo(resultado) {
 }
 
 
-/* =================================================
-   CONFIGURAR COMISSÃO / FRETE
-================================================= */
+/* =========================================
+   COMISSÃO / FRETE
+========================================= */
 
 function configurarComissaoFrete() {
 
@@ -897,12 +1127,6 @@ function configurarComissaoFrete() {
         );
 
 
-    /*
-       Área aparece somente
-       depois da identificação.
-    */
-
-
     area.classList.remove("oculto");
 
 
@@ -922,19 +1146,16 @@ function configurarComissaoFrete() {
 
         explicacao.textContent =
 
-            "A comissão será descontada " +
+            "A comissão é descontada " +
             "do valor da venda. " +
             "Não aumenta o valor pago pelo cliente.";
 
 
         linhaFrete.classList.add("oculto");
 
-
         linhaComissao.classList.remove("oculto");
 
-
         linhaLiquido.classList.remove("oculto");
-
 
     }
 
@@ -955,37 +1176,15 @@ function configurarComissaoFrete() {
 
         explicacao.textContent =
 
-            "O frete será acrescentado " +
-            "ao valor dos produtos e cobrado " +
-            "do cliente.";
+            "O frete é acrescentado " +
+            "ao valor dos produtos e cobrado do cliente.";
 
 
         linhaFrete.classList.remove("oculto");
 
-
         linhaComissao.classList.add("oculto");
 
-
         linhaLiquido.classList.add("oculto");
-
-
-    }
-
-
-    else {
-
-
-        titulo.textContent =
-            "Comissão/Frete";
-
-
-        label.textContent =
-            "Valor";
-
-
-        explicacao.textContent =
-            "";
-
 
     }
 
@@ -995,9 +1194,9 @@ function configurarComissaoFrete() {
 }
 
 
-/* =================================================
+/* =========================================
    LEITOR
-================================================= */
+========================================= */
 
 function iniciarLeitor() {
 
@@ -1051,9 +1250,7 @@ function iniciarLeitor() {
     leitor.start(
 
         {
-
             facingMode: "environment"
-
         },
 
         configuracao,
@@ -1113,10 +1310,6 @@ function iniciarLeitor() {
 
         function(erro) {
 
-            /*
-               Erros de procura são ignorados.
-            */
-
         }
 
     )
@@ -1164,9 +1357,9 @@ function iniciarLeitor() {
 }
 
 
-/* =================================================
+/* =========================================
    BUSCAR PRODUTO
-================================================= */
+========================================= */
 
 function buscarProduto(codigo) {
 
@@ -1196,9 +1389,9 @@ function buscarProduto(codigo) {
 }
 
 
-/* =================================================
+/* =========================================
    RECEBER PRODUTO
-================================================= */
+========================================= */
 
 function receberProduto(resultado) {
 
@@ -1277,14 +1470,14 @@ function receberProduto(resultado) {
 
         "<strong>Produto encontrado!</strong><br><br>" +
 
-        resultado.produto;
+        escaparHTML(resultado.produto);
 
 }
 
 
-/* =================================================
+/* =========================================
    ADICIONAR AO CARRINHO
-================================================= */
+========================================= */
 
 function adicionarAoCarrinho() {
 
@@ -1413,9 +1606,9 @@ function adicionarAoCarrinho() {
 }
 
 
-/* =================================================
+/* =========================================
    ATUALIZAR CARRINHO
-================================================= */
+========================================= */
 
 function atualizarCarrinho() {
 
@@ -1586,9 +1779,9 @@ function atualizarCarrinho() {
 }
 
 
-/* =================================================
+/* =========================================
    REMOVER PRODUTO
-================================================= */
+========================================= */
 
 function removerProduto(indice) {
 
@@ -1604,9 +1797,9 @@ function removerProduto(indice) {
 }
 
 
-/* =================================================
+/* =========================================
    TOTAL DOS PRODUTOS
-================================================= */
+========================================= */
 
 function obterTotalProdutos() {
 
@@ -1632,9 +1825,53 @@ function obterTotalProdutos() {
 }
 
 
-/* =================================================
+/* =========================================
+   TOTAL DA VENDA
+========================================= */
+
+function obterTotalVenda() {
+
+
+    const totalProdutos =
+        obterTotalProdutos();
+
+
+    const valor =
+        Number(
+            document
+                .getElementById(
+                    "valorComissaoFrete"
+                )
+                .value
+        ) || 0;
+
+
+    if (
+        usuarioAtual &&
+        usuarioAtual.perfil ===
+        "ENTREGADOR"
+    ) {
+
+        return totalProdutos + valor;
+
+    }
+
+
+    /*
+       Para vendedor:
+       comissão NÃO aumenta o valor
+       cobrado do cliente.
+    */
+
+
+    return totalProdutos;
+
+}
+
+
+/* =========================================
    CALCULAR RESUMO
-================================================= */
+========================================= */
 
 function calcularResumoVenda() {
 
@@ -1663,10 +1900,6 @@ function calcularResumoVenda() {
         ) || 0;
 
 
-    const perfil =
-        usuarioAtual.perfil;
-
-
     document
         .getElementById(
             "resumoProdutos"
@@ -1680,19 +1913,13 @@ function calcularResumoVenda() {
 
 
     if (
-        perfil === "ENTREGADOR"
+        usuarioAtual.perfil ===
+        "ENTREGADOR"
     ) {
 
 
-        /*
-           FRETE:
-           soma ao valor cobrado.
-        */
-
-
         const totalPagar =
-            totalProdutos +
-            valor;
+            totalProdutos + valor;
 
 
         document
@@ -1720,24 +1947,13 @@ function calcularResumoVenda() {
 
 
     else if (
-        perfil === "VENDEDOR"
+        usuarioAtual.perfil ===
+        "VENDEDOR"
     ) {
 
 
-        /*
-           COMISSÃO:
-           NÃO altera o valor pago
-           pelo cliente.
-        */
-
-
-        const totalPagar =
-            totalProdutos;
-
-
         const liquido =
-            totalProdutos -
-            valor;
+            totalProdutos - valor;
 
 
         document
@@ -1758,7 +1974,7 @@ function calcularResumoVenda() {
 
             "R$ " +
             formatarMoeda(
-                totalPagar
+                totalProdutos
             );
 
 
@@ -1775,13 +1991,12 @@ function calcularResumoVenda() {
 
     }
 
-
 }
 
 
-/* =================================================
-   CONTINUAR VENDA
-================================================= */
+/* =========================================
+   CONTINUAR PARA PAGAMENTO
+========================================= */
 
 function continuarVenda() {
 
@@ -1802,39 +2017,622 @@ function continuarVenda() {
     calcularResumoVenda();
 
 
-    const totalProdutos =
-        obterTotalProdutos();
+    /*
+       Começa uma nova lista de pagamentos.
+    */
+
+    pagamentos = [];
+
+
+    document
+        .getElementById(
+            "formaPagamento"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "valorPagamento"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "clienteFiado"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "campoClienteFiado"
+        )
+        .classList
+        .add("oculto");
+
+
+    document
+        .getElementById(
+            "areaPagamentos"
+        )
+        .classList
+        .remove("oculto");
+
+
+    document
+        .getElementById(
+            "botaoContinuar"
+        )
+        .classList
+        .add("oculto");
+
+
+    atualizarPagamentos();
+
+
+    /*
+       Rola até a área de pagamentos.
+    */
+
+    document
+        .getElementById(
+            "areaPagamentos"
+        )
+        .scrollIntoView({
+            behavior: "smooth"
+        });
+
+}
+
+
+/* =========================================
+   ALTERAR FORMA DE PAGAMENTO
+========================================= */
+
+function alterarFormaPagamento() {
+
+
+    const forma =
+        document
+            .getElementById(
+                "formaPagamento"
+            )
+            .value;
+
+
+    const campo =
+        document
+            .getElementById(
+                "campoClienteFiado"
+            );
+
+
+    if (
+        forma === "FIADO"
+    ) {
+
+        campo
+            .classList
+            .remove("oculto");
+
+    }
+
+    else {
+
+        campo
+            .classList
+            .add("oculto");
+
+        document
+            .getElementById(
+                "clienteFiado"
+            )
+            .value = "";
+
+    }
+
+}
+
+
+/* =========================================
+   TOTAL DOS PAGAMENTOS
+========================================= */
+
+function obterTotalPagamentos() {
+
+
+    let total = 0;
+
+
+    pagamentos.forEach(
+
+        function(pagamento) {
+
+            total +=
+                Number(
+                    pagamento.valor
+                );
+
+        }
+
+    );
+
+
+    return total;
+
+}
+
+
+/* =========================================
+   ADICIONAR PAGAMENTO
+========================================= */
+
+function adicionarPagamento() {
+
+
+    const forma =
+        document
+            .getElementById(
+                "formaPagamento"
+            )
+            .value;
 
 
     const valor =
         Number(
             document
                 .getElementById(
-                    "valorComissaoFrete"
+                    "valorPagamento"
                 )
                 .value
-        ) || 0;
+        );
 
 
-    let totalPagar =
-        totalProdutos;
+    const totalVenda =
+        obterTotalVenda();
 
 
-    if (
-        usuarioAtual.perfil ===
-        "ENTREGADOR"
-    ) {
+    const totalAtual =
+        obterTotalPagamentos();
 
-        totalPagar =
-            totalProdutos +
-            valor;
+
+    const restante =
+        totalVenda -
+        totalAtual;
+
+
+    if (!forma) {
+
+        alert(
+            "Selecione a forma de pagamento."
+        );
+
+        return;
 
     }
 
 
-    alert(
+    if (
+        isNaN(valor) ||
+        valor <= 0
+    ) {
 
-        "Venda preparada!\n\n" +
+        alert(
+            "Informe um valor de pagamento válido."
+        );
+
+        return;
+
+    }
+
+
+    /*
+       Não permitir pagamento
+       maior que o restante.
+    */
+
+    if (
+        valor > restante + 0.001
+    ) {
+
+        alert(
+
+            "O valor informado é maior " +
+            "que o restante da venda.\n\n" +
+
+            "Restante: R$ " +
+            formatarMoeda(restante)
+
+        );
+
+        return;
+
+    }
+
+
+    /*
+       FIADO exige cliente.
+    */
+
+    let cliente = "";
+
+
+    if (
+        forma === "FIADO"
+    ) {
+
+
+        cliente =
+            document
+                .getElementById(
+                    "clienteFiado"
+                )
+                .value
+                .trim();
+
+
+        if (!cliente) {
+
+            alert(
+                "Informe o cliente do FIADO."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    pagamentos.push({
+
+        forma: forma,
+
+        valor: valor,
+
+        cliente: cliente
+
+    });
+
+
+    /*
+       Limpa os campos.
+    */
+
+    document
+        .getElementById(
+            "formaPagamento"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "valorPagamento"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "clienteFiado"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "campoClienteFiado"
+        )
+        .classList
+        .add("oculto");
+
+
+    atualizarPagamentos();
+
+}
+
+
+/* =========================================
+   ATUALIZAR PAGAMENTOS
+========================================= */
+
+function atualizarPagamentos() {
+
+
+    const lista =
+        document.getElementById(
+            "listaPagamentos"
+        );
+
+
+    const totalVenda =
+        obterTotalVenda();
+
+
+    const totalPagamentos =
+        obterTotalPagamentos();
+
+
+    let restante =
+        totalVenda -
+        totalPagamentos;
+
+
+    /*
+       Evita mostrar -0,00
+    */
+
+    if (
+        Math.abs(restante) < 0.005
+    ) {
+
+        restante = 0;
+
+    }
+
+
+    document
+        .getElementById(
+            "pagamentoTotalVenda"
+        )
+        .textContent =
+
+        "R$ " +
+        formatarMoeda(
+            totalVenda
+        );
+
+
+    document
+        .getElementById(
+            "pagamentoTotalInformado"
+        )
+        .textContent =
+
+        "R$ " +
+        formatarMoeda(
+            totalPagamentos
+        );
+
+
+    document
+        .getElementById(
+            "pagamentoRestante"
+        )
+        .textContent =
+
+        "R$ " +
+        formatarMoeda(
+            restante
+        );
+
+
+    /*
+       Lista visual dos pagamentos.
+    */
+
+    if (
+        pagamentos.length === 0
+    ) {
+
+        lista.innerHTML =
+            "";
+
+    }
+
+    else {
+
+
+        let html = "";
+
+
+        pagamentos.forEach(
+
+            function(pagamento, indice) {
+
+
+                html += `
+
+                    <div class="pagamento-item">
+
+                        <div class="pagamento-forma">
+
+                            ${escaparHTML(
+                                pagamento.forma
+                            )}
+
+                        </div>
+
+                        <div class="pagamento-valor">
+
+                            R$ ${formatarMoeda(
+                                pagamento.valor
+                            )}
+
+                        </div>
+
+                        ${
+                            pagamento.forma === "FIADO"
+
+                            ?
+
+                            `<div class="pequeno">
+                                Cliente:
+                                ${escaparHTML(
+                                    pagamento.cliente
+                                )}
+                            </div>`
+
+                            :
+
+                            ""
+
+                        }
+
+                        <button
+                            class="botao-remover-pagamento"
+                            onclick="removerPagamento(${indice})">
+
+                            🗑️ Remover
+
+                        </button>
+
+                    </div>
+
+                `;
+
+            }
+
+        );
+
+
+        lista.innerHTML =
+            html;
+
+    }
+
+
+    const mensagem =
+        document.getElementById(
+            "mensagemPagamento"
+        );
+
+
+    const botao =
+        document.getElementById(
+            "botaoFinalizar"
+        );
+
+
+    if (
+        restante === 0
+    ) {
+
+
+        mensagem.className =
+            "restante pagamento-ok";
+
+
+        mensagem.innerHTML =
+
+            "<strong>🟢 Pagamento completo!</strong>" +
+
+            "<br><br>" +
+
+            "A soma das formas de pagamento " +
+            "é exatamente igual ao total da venda.";
+
+
+        botao
+            .classList
+            .remove("oculto");
+
+    }
+
+    else {
+
+
+        mensagem.className =
+            "restante pagamento-pendente";
+
+
+        mensagem.innerHTML =
+
+            "<strong>🟡 Pagamento incompleto</strong>" +
+
+            "<br><br>" +
+
+            "Ainda falta informar: " +
+
+            "<strong>R$ " +
+
+            formatarMoeda(restante) +
+
+            "</strong>";
+
+
+        botao
+            .classList
+            .add("oculto");
+
+    }
+
+}
+
+
+/* =========================================
+   REMOVER PAGAMENTO
+========================================= */
+
+function removerPagamento(indice) {
+
+
+    pagamentos.splice(
+        indice,
+        1
+    );
+
+
+    atualizarPagamentos();
+
+}
+
+
+/* =========================================
+   FINALIZAR VENDA
+========================================= */
+
+function finalizarVenda() {
+
+
+    const totalVenda =
+        obterTotalVenda();
+
+
+    const totalPagamentos =
+        obterTotalPagamentos();
+
+
+    const diferenca =
+        Math.abs(
+            totalVenda -
+            totalPagamentos
+        );
+
+
+    if (
+        diferenca > 0.005
+    ) {
+
+        alert(
+
+            "A venda não pode ser finalizada.\n\n" +
+
+            "Total da venda: R$ " +
+            formatarMoeda(totalVenda) +
+
+            "\nTotal informado: R$ " +
+            formatarMoeda(totalPagamentos) +
+
+            "\n\nConfira os pagamentos."
+
+        );
+
+        return;
+
+    }
+
+
+    /*
+       Confirmação da venda.
+    */
+
+    let resumo =
+
+        "VENDA PRONTA PARA GRAVAÇÃO\n\n" +
 
         "Usuário: " +
         usuarioAtual.usuario +
@@ -1842,26 +2640,61 @@ function continuarVenda() {
         "\nPerfil: " +
         usuarioAtual.perfil +
 
-        "\n\n" +
+        "\n\nTotal: R$ " +
+        formatarMoeda(totalVenda) +
 
-        "Total a pagar: R$ " +
-        formatarMoeda(
-            totalPagar
-        ) +
+        "\n\n";
 
-        "\n\n" +
 
-        "A próxima etapa será o " +
-        "controle dos pagamentos."
+    pagamentos.forEach(
+
+        function(pagamento) {
+
+
+            resumo +=
+
+                pagamento.forma +
+
+                ": R$ " +
+
+                formatarMoeda(
+                    pagamento.valor
+                );
+
+
+            if (
+                pagamento.forma === "FIADO"
+            ) {
+
+                resumo +=
+
+                    "\nCliente: " +
+                    pagamento.cliente;
+
+            }
+
+
+            resumo += "\n";
+
+        }
 
     );
+
+
+    resumo +=
+
+        "\n\nA próxima etapa será " +
+        "gravar esta venda na planilha.";
+
+
+    alert(resumo);
 
 }
 
 
-/* =================================================
-   MENSAGEM DO DISPOSITIVO
-================================================= */
+/* =========================================
+   MENSAGEM DISPOSITIVO
+========================================= */
 
 function mostrarResultadoDispositivo(
     sucesso,
@@ -1907,9 +2740,9 @@ function mostrarResultadoDispositivo(
 }
 
 
-/* =================================================
-   FORMATAR MOEDA
-================================================= */
+/* =========================================
+   MOEDA
+========================================= */
 
 function formatarMoeda(valor) {
 
@@ -1944,9 +2777,9 @@ function formatarMoeda(valor) {
 }
 
 
-/* =================================================
+/* =========================================
    ESCAPAR HTML
-================================================= */
+========================================= */
 
 function escaparHTML(valor) {
 
