@@ -2581,20 +2581,18 @@ function removerPagamento(indice) {
 }
 
 
+
 /* =========================================
-   FINALIZAR VENDA
+   FINALIZAR VENDA E GRAVAR NA PLANILHA
 ========================================= */
 
 function finalizarVenda() {
 
-
     const totalVenda =
         obterTotalVenda();
 
-
     const totalPagamentos =
         obterTotalPagamentos();
-
 
     const diferenca =
         Math.abs(
@@ -2603,12 +2601,15 @@ function finalizarVenda() {
         );
 
 
-    if (
-        diferenca > 0.005
-    ) {
+    /*
+       Conferência de segurança.
+       A soma dos pagamentos precisa
+       ser exatamente igual ao total.
+    */
+
+    if (diferenca > 0.005) {
 
         alert(
-
             "A venda não pode ser finalizada.\n\n" +
 
             "Total da venda: R$ " +
@@ -2618,79 +2619,652 @@ function finalizarVenda() {
             formatarMoeda(totalPagamentos) +
 
             "\n\nConfira os pagamentos."
-
         );
 
         return;
+    }
+
+
+    /*
+       Verifica se existe usuário identificado.
+    */
+
+    if (!usuarioAtual) {
+
+        alert(
+            "O vendedor/entregador não foi identificado."
+        );
+
+        return;
+    }
+
+
+    /*
+       Verifica se existe produto no carrinho.
+    */
+
+    if (
+        !carrinho ||
+        carrinho.length === 0
+    ) {
+
+        alert(
+            "Nenhum produto foi adicionado à venda."
+        );
+
+        return;
+    }
+
+
+    /*
+       ======================================================
+       TOTAL DOS PRODUTOS
+       ======================================================
+    */
+
+    const totalProdutos =
+        obterTotalProdutos();
+
+
+    /*
+       ======================================================
+       COMISSÃO / FRETE
+       ======================================================
+    */
+
+    const valorComissaoFrete =
+        Number(
+            document
+                .getElementById(
+                    "valorComissaoFrete"
+                )
+                .value
+        ) || 0;
+
+
+    let frete = 0;
+
+    let comissao = 0;
+
+
+    /*
+       VENDEDOR:
+       o valor informado é comissão.
+
+       A comissão NÃO aumenta o valor
+       cobrado do cliente.
+    */
+
+    if (
+        usuarioAtual.perfil ===
+        "VENDEDOR"
+    ) {
+
+        comissao =
+            valorComissaoFrete;
+
+        frete = 0;
 
     }
 
 
     /*
-       Confirmação da venda.
+       ENTREGADOR:
+       o valor informado é frete.
+
+       O frete aumenta o valor
+       cobrado do cliente.
     */
 
-    let resumo =
+    else if (
+        usuarioAtual.perfil ===
+        "ENTREGADOR"
+    ) {
 
-        "VENDA PRONTA PARA GRAVAÇÃO\n\n" +
+        frete =
+            valorComissaoFrete;
 
-        "Usuário: " +
-        usuarioAtual.usuario +
+        comissao = 0;
 
-        "\nPerfil: " +
-        usuarioAtual.perfil +
+    }
 
-        "\n\nTotal: R$ " +
-        formatarMoeda(totalVenda) +
 
-        "\n\n";
+    /*
+       ======================================================
+       FORMAS DE PAGAMENTO
+       ======================================================
+    */
 
+    let propig = 0;
+
+    let rede = 0;
+
+    let pix = 0;
+
+    let dinheiro = 0;
+
+    let permuta = 0;
+
+    let fiado = 0;
+
+    let clienteFiado = "";
+
+
+    /*
+       Percorre todos os pagamentos
+       registrados na venda.
+    */
 
     pagamentos.forEach(
 
         function(pagamento) {
 
-
-            resumo +=
-
-                pagamento.forma +
-
-                ": R$ " +
-
-                formatarMoeda(
+            const valor =
+                Number(
                     pagamento.valor
-                );
+                ) || 0;
 
 
             if (
-                pagamento.forma === "FIADO"
+                pagamento.forma ===
+                "PROPIG"
             ) {
 
-                resumo +=
-
-                    "\nCliente: " +
-                    pagamento.cliente;
+                propig += valor;
 
             }
 
 
-            resumo += "\n";
+            else if (
+                pagamento.forma ===
+                "REDE"
+            ) {
+
+                rede += valor;
+
+            }
+
+
+            else if (
+                pagamento.forma ===
+                "PIX"
+            ) {
+
+                pix += valor;
+
+            }
+
+
+            else if (
+                pagamento.forma ===
+                "DINHEIRO"
+            ) {
+
+                dinheiro += valor;
+
+            }
+
+
+            else if (
+                pagamento.forma ===
+                "PERMUTA"
+            ) {
+
+                permuta += valor;
+
+            }
+
+
+            else if (
+                pagamento.forma ===
+                "FIADO"
+            ) {
+
+                fiado += valor;
+
+                /*
+                   Guarda o cliente do FIADO.
+                */
+
+                clienteFiado =
+                    pagamento.cliente || "";
+
+            }
 
         }
-
     );
 
 
-    resumo +=
+    /*
+       ======================================================
+       MONTA OS DADOS DA VENDA
+       ======================================================
+    */
 
-        "\n\nA próxima etapa será " +
-        "gravar esta venda na planilha.";
+    const dadosVenda = {
+
+        usuarioAtual: {
+
+            idAparelho:
+                usuarioAtual.idAparelho,
+
+            usuario:
+                usuarioAtual.usuario,
+
+            perfil:
+                usuarioAtual.perfil
+
+        },
 
 
-    alert(resumo);
+        totalProdutos:
+            totalProdutos,
+
+
+        frete:
+            frete,
+
+
+        comissao:
+            comissao,
+
+
+        totalVenda:
+            totalVenda,
+
+
+        pagamentos: {
+
+            PROPIG:
+                propig,
+
+            REDE:
+                rede,
+
+            PIX:
+                pix,
+
+            DINHEIRO:
+                dinheiro,
+
+            PERMUTA:
+                permuta,
+
+            FIADO:
+                fiado
+
+        },
+
+
+        clienteFiado:
+            clienteFiado,
+
+
+        itens:
+            carrinho.map(
+
+                function(item) {
+
+                    return {
+
+                        codigo:
+                            item.codigo,
+
+                        produto:
+                            item.produto,
+
+                        quantidade:
+                            Number(
+                                item.quantidade
+                            ) || 0,
+
+                        preco:
+                            Number(
+                                item.preco
+                            ) || 0,
+
+                        subtotal:
+                            Number(
+                                item.subtotal
+                            ) ||
+
+                            (
+                                Number(
+                                    item.preco
+                                ) *
+
+                                Number(
+                                    item.quantidade
+                                )
+                            )
+
+                    };
+
+                }
+
+            )
+
+    };
+
+
+    /*
+       ======================================================
+       MENSAGEM ENQUANTO GRAVA
+       ======================================================
+    */
+
+    const botao =
+        document.getElementById(
+            "botaoFinalizar"
+        );
+
+
+    botao.disabled = true;
+
+    botao.textContent =
+        "⏳ GRAVANDO VENDA...";
+
+
+    /*
+       ======================================================
+       CALLBACK ÚNICO
+       ======================================================
+    */
+
+    const nomeCallback =
+        "receberGravacaoVenda_" +
+        Date.now();
+
+
+    /*
+       Cria temporariamente a função
+       que receberá a resposta do
+       Google Apps Script.
+    */
+
+    window[nomeCallback] =
+        function(resultado) {
+
+            try {
+
+                if (
+                    resultado &&
+                    resultado.sucesso
+                ) {
+
+                    /*
+                       Venda gravada com sucesso.
+                    */
+
+                    alert(
+
+                        "✅ VENDA GRAVADA COM SUCESSO!\n\n" +
+
+                        "Número da venda: " +
+                        resultado.numeroVenda +
+
+                        "\nTotal: R$ " +
+                        formatarMoeda(
+                            resultado.totalVenda
+                        ) +
+
+                        "\nItens: " +
+                        resultado.quantidadeItens
+
+                    );
+
+
+                    /*
+                       Limpa a venda atual
+                       para permitir uma nova venda.
+                    */
+
+                    carrinho = [];
+
+                    pagamentos = [];
+
+                    produtoPendente = null;
+
+
+                    /*
+                       Limpa campos do produto.
+                    */
+
+                    document
+                        .getElementById(
+                            "codigoProduto"
+                        )
+                        .value = "";
+
+
+                    document
+                        .getElementById(
+                            "nomeProduto"
+                        )
+                        .value = "";
+
+
+                    document
+                        .getElementById(
+                            "precoProduto"
+                        )
+                        .value = "";
+
+
+                    document
+                        .getElementById(
+                            "quantidadeProduto"
+                        )
+                        .value = 1;
+
+
+                    /*
+                       Zera comissão/frete.
+                    */
+
+                    document
+                        .getElementById(
+                            "valorComissaoFrete"
+                        )
+                        .value = 0;
+
+
+                    /*
+                       Atualiza carrinho.
+                    */
+
+                    atualizarCarrinho();
+
+
+                    /*
+                       Esconde áreas que não
+                       devem permanecer abertas.
+                    */
+
+                    document
+                        .getElementById(
+                            "areaPagamentos"
+                        )
+                        .classList
+                        .add("oculto");
+
+
+                    document
+                        .getElementById(
+                            "resumoVenda"
+                        )
+                        .classList
+                        .add("oculto");
+
+
+                    document
+                        .getElementById(
+                            "botaoContinuar"
+                        )
+                        .classList
+                        .add("oculto");
+
+
+                    /*
+                       Mensagem visual.
+                    */
+
+                    const resultadoArea =
+                        document.getElementById(
+                            "resultado"
+                        );
+
+
+                    resultadoArea.className =
+                        "sucesso";
+
+
+                    resultadoArea.innerHTML =
+
+                        "<strong>✅ Venda " +
+                        escaparHTML(
+                            resultado.numeroVenda
+                        ) +
+                        " gravada com sucesso!</strong>";
+
+
+                }
+
+                else {
+
+                    /*
+                       Erro retornado pelo servidor.
+                    */
+
+                    alert(
+
+                        "❌ NÃO FOI POSSÍVEL GRAVAR A VENDA.\n\n" +
+
+                        (
+                            resultado &&
+                            resultado.mensagem
+
+                            ?
+
+                            resultado.mensagem
+
+                            :
+
+                            "Erro desconhecido."
+                        )
+
+                    );
+
+                }
+
+            }
+
+            finally {
+
+                botao.disabled =
+                    false;
+
+                botao.textContent =
+                    "🟢 FINALIZAR VENDA";
+
+
+                /*
+                   Remove o callback temporário.
+                */
+
+                try {
+
+                    delete window[
+                        nomeCallback
+                    ];
+
+                }
+
+                catch (e) {}
+
+            }
+
+        };
+
+
+    /*
+       ======================================================
+       ENVIA A VENDA PARA O GOOGLE APPS SCRIPT
+       ======================================================
+    */
+
+    const dadosCodificados =
+        encodeURIComponent(
+            JSON.stringify(
+                dadosVenda
+            )
+        );
+
+
+    const url =
+
+        URL_APPS_SCRIPT +
+
+        "?acao=gravarVenda" +
+
+        "&dados=" +
+        dadosCodificados +
+
+        "&callback=" +
+        nomeCallback;
+
+
+    /*
+       JSONP:
+       cria uma tag <script> para
+       enviar os dados ao Apps Script.
+    */
+
+    const script =
+        document.createElement(
+            "script"
+        );
+
+
+    script.src =
+        url;
+
+
+    script.onerror =
+        function() {
+
+            alert(
+                "❌ Não foi possível comunicar com o servidor.\n\n" +
+                "Verifique sua conexão com a internet."
+            );
+
+
+            botao.disabled =
+                false;
+
+
+            botao.textContent =
+                "🟢 FINALIZAR VENDA";
+
+
+            try {
+
+                delete window[
+                    nomeCallback
+                ];
+
+            }
+
+            catch (e) {}
+
+        };
+
+
+    document.body.appendChild(
+        script
+    );
 
 }
-
 
 /* =========================================
    MENSAGEM DISPOSITIVO
