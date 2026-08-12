@@ -2823,6 +2823,8 @@ function finalizarVenda() {
 
     let clienteFiado = "";
 
+let clientePermuta = "";
+
 
     /*
        Percorre todos os pagamentos
@@ -2890,20 +2892,29 @@ function finalizarVenda() {
 
 
             else if (
-                pagamento.forma ===
-                "FIADO"
-            ) {
+    pagamento.forma ===
+    "FIADO"
+) {
 
-                fiado += valor;
+    fiado += valor;
 
-                /*
-                   Guarda o cliente do FIADO.
-                */
+    clienteFiado =
+        pagamento.cliente || "";
 
-                clienteFiado =
-                    pagamento.cliente || "";
+}
 
-            }
+
+else if (
+    pagamento.forma ===
+    "PERMUTA"
+) {
+
+    permuta += valor;
+
+    clientePermuta =
+        pagamento.cliente || "";
+
+}
 
         }
     );
@@ -2970,11 +2981,13 @@ function finalizarVenda() {
         },
 
 
-        clienteFiado:
-            clienteFiado,
+       clienteFiado:
+    clienteFiado,
 
+clientePermuta:
+    clientePermuta,
 
-        itens:
+itens:
             carrinho.map(
 
                 function(item) {
