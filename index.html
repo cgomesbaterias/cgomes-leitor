@@ -743,23 +743,24 @@ Sistema de vendas
 
 
         <div id="campoClienteFiado"
-             class="fiado-box oculto">
+     class="fiado-box oculto">
 
-            <label>
-                Cliente do FIADO
-            </label>
+    <label id="labelClientePagamento">
+        Cliente
+    </label>
 
-            <input
-                id="clienteFiado"
-                type="text"
-                placeholder="Nome ou identificação do cliente">
+    <input
+        id="clienteFiado"
+        type="text"
+        placeholder="Nome ou identificação do cliente">
 
-            <div class="pequeno">
-                Informe o cliente somente quando
-                houver valor FIADO.
-            </div>
+    <div
+        id="textoClientePagamento"
+        class="pequeno">
+        Informe o cliente.
+    </div>
 
-        </div>
+</div>
 
 
         <div class="campo">
@@ -2093,7 +2094,6 @@ function continuarVenda() {
 
 function alterarFormaPagamento() {
 
-
     const forma =
         document
             .getElementById(
@@ -2109,29 +2109,91 @@ function alterarFormaPagamento() {
             );
 
 
-    if (
-        forma === "FIADO"
-    ) {
+    const label =
+        document
+            .getElementById(
+                "labelClientePagamento"
+            );
+
+
+    const texto =
+        document
+            .getElementById(
+                "textoClientePagamento"
+            );
+
+
+    const input =
+        document
+            .getElementById(
+                "clienteFiado"
+            );
+
+
+    /*
+       FIADO
+    */
+
+    if (forma === "FIADO") {
 
         campo
             .classList
             .remove("oculto");
 
+
+        label.textContent =
+            "Cliente do FIADO";
+
+
+        input.placeholder =
+            "Nome ou identificação do cliente";
+
+
+        texto.textContent =
+            "Informe o cliente do FIADO.";
+
+
+        return;
     }
 
-    else {
+
+    /*
+       PERMUTA
+    */
+
+    if (forma === "PERMUTA") {
 
         campo
             .classList
-            .add("oculto");
+            .remove("oculto");
 
-        document
-            .getElementById(
-                "clienteFiado"
-            )
-            .value = "";
 
+        label.textContent =
+            "Cliente da PERMUTA";
+
+
+        input.placeholder =
+            "Nome ou identificação do cliente";
+
+
+        texto.textContent =
+            "Informe o cliente relacionado à permuta.";
+
+
+        return;
     }
+
+
+    /*
+       OUTRAS FORMAS
+    */
+
+    campo
+        .classList
+        .add("oculto");
+
+
+    input.value = "";
 
 }
 
@@ -2252,38 +2314,50 @@ function adicionarPagamento() {
     }
 
 
-    /*
-       FIADO exige cliente.
-    */
+/*
+   FIADO e PERMUTA exigem cliente.
+*/
 
-    let cliente = "";
-
-
-    if (
-        forma === "FIADO"
-    ) {
+let cliente = "";
 
 
-        cliente =
-            document
-                .getElementById(
-                    "clienteFiado"
-                )
-                .value
-                .trim();
+if (
+    forma === "FIADO" ||
+    forma === "PERMUTA"
+) {
+
+    cliente =
+        document
+            .getElementById(
+                "clienteFiado"
+            )
+            .value
+            .trim();
 
 
-        if (!cliente) {
+    if (!cliente) {
+
+        if (forma === "FIADO") {
 
             alert(
                 "Informe o cliente do FIADO."
             );
 
-            return;
+        }
+
+        else {
+
+            alert(
+                "Informe o cliente da PERMUTA."
+            );
 
         }
 
+        return;
+
     }
+
+}
 
 
     pagamentos.push({
