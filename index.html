@@ -2529,7 +2529,10 @@ function atualizarPagamentos() {
                         </div>
 
                         ${
-                            pagamento.forma === "FIADO"
+                            (
+                                pagamento.forma === "FIADO" ||
+                                pagamento.forma === "PERMUTA"
+                            )
 
                             ?
 
@@ -2822,8 +2825,8 @@ function finalizarVenda() {
     let fiado = 0;
 
     let clienteFiado = "";
-
-let clientePermuta = "";
+      
+      let clientePermuta = "";
 
 
     /*
@@ -2888,33 +2891,23 @@ let clientePermuta = "";
 
                 permuta += valor;
 
+                clientePermuta =
+                    pagamento.cliente || "";
+
             }
 
 
             else if (
-    pagamento.forma ===
-    "FIADO"
-) {
+                pagamento.forma ===
+                "FIADO"
+            ) {
 
-    fiado += valor;
+                fiado += valor;
 
-    clienteFiado =
-        pagamento.cliente || "";
+                clienteFiado =
+                    pagamento.cliente || "";
 
-}
-
-
-else if (
-    pagamento.forma ===
-    "PERMUTA"
-) {
-
-    permuta += valor;
-
-    clientePermuta =
-        pagamento.cliente || "";
-
-}
+            }
 
         }
     );
