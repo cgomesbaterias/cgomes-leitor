@@ -72,6 +72,11 @@ button {
     color: white;
 }
 
+.botao-voltar {
+    background: #5f6368;
+    color: white;
+}
+
 .botao-confirmar {
     background: #1a73e8;
     color: white;
@@ -814,6 +819,15 @@ Sistema de vendas
 
     </button>
 
+    <button
+        id="botaoVoltar"
+        class="botao-voltar"
+        onclick="voltarParaVenda()">
+
+        ⬅️ Voltar para a venda
+
+    </button>
+
 </div>
 
 
@@ -1128,13 +1142,12 @@ function configurarComissaoFrete() {
         );
 
 
-    area.classList.remove("oculto");
-
-
     if (
         usuarioAtual.perfil ===
         "VENDEDOR"
     ) {
+
+        area.classList.remove("oculto");
 
 
         titulo.textContent =
@@ -1166,6 +1179,8 @@ function configurarComissaoFrete() {
         "ENTREGADOR"
     ) {
 
+        area.classList.remove("oculto");
+
 
         titulo.textContent =
             "🚚 Frete";
@@ -1182,6 +1197,23 @@ function configurarComissaoFrete() {
 
 
         linhaFrete.classList.remove("oculto");
+
+        linhaComissao.classList.add("oculto");
+
+        linhaLiquido.classList.add("oculto");
+
+    }
+
+
+    else {
+
+        area.classList.add("oculto");
+
+        document
+            .getElementById("valorComissaoFrete")
+            .value = 0;
+
+        linhaFrete.classList.add("oculto");
 
         linhaComissao.classList.add("oculto");
 
@@ -2015,6 +2047,38 @@ function continuarVenda() {
     }
 
 
+    if (
+        usuarioAtual &&
+        (
+            usuarioAtual.perfil === "VENDEDOR" ||
+            usuarioAtual.perfil === "ENTREGADOR"
+        )
+    ) {
+
+        const valorComissaoFrete =
+            Number(
+                document.getElementById("valorComissaoFrete").value
+            );
+
+        if (!(valorComissaoFrete > 0)) {
+
+            alert(
+                usuarioAtual.perfil === "VENDEDOR"
+                    ? "Informe o valor da comissão antes de continuar."
+                    : "Informe o valor do frete antes de continuar."
+            );
+
+            document
+                .getElementById("valorComissaoFrete")
+                .focus();
+
+            return;
+
+        }
+
+    }
+
+
     calcularResumoVenda();
 
 
@@ -2084,6 +2148,27 @@ function continuarVenda() {
         .scrollIntoView({
             behavior: "smooth"
         });
+
+}
+
+
+/* =========================================
+   VOLTAR PARA A VENDA
+========================================= */
+
+function voltarParaVenda() {
+
+    document
+        .getElementById("areaPagamentos")
+        .classList.add("oculto");
+
+    document
+        .getElementById("botaoContinuar")
+        .classList.remove("oculto");
+
+    document
+        .getElementById("resumoVenda")
+        .scrollIntoView({ behavior: "smooth" });
 
 }
 
@@ -2529,10 +2614,7 @@ function atualizarPagamentos() {
                         </div>
 
                         ${
-                            (
-                                pagamento.forma === "FIADO" ||
-                                pagamento.forma === "PERMUTA"
-                            )
+                            pagamento.forma === "FIADO"
 
                             ?
 
@@ -2885,29 +2967,29 @@ function finalizarVenda() {
 
 
             else if (
-                pagamento.forma ===
-                "PERMUTA"
-            ) {
+    pagamento.forma ===
+    "FIADO"
+) {
 
-                permuta += valor;
+    fiado += valor;
 
-                clientePermuta =
-                    pagamento.cliente || "";
+    clienteFiado =
+        pagamento.cliente || "";
 
-            }
+}
 
 
-            else if (
-                pagamento.forma ===
-                "FIADO"
-            ) {
+else if (
+    pagamento.forma ===
+    "PERMUTA"
+) {
 
-                fiado += valor;
+    permuta += valor;
 
-                clienteFiado =
-                    pagamento.cliente || "";
+    clientePermuta =
+        pagamento.cliente || "";
 
-            }
+}
 
         }
     );
