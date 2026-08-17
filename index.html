@@ -469,6 +469,16 @@ Sistema de vendas
 </button>
 
 
+<button
+    id="botaoFiados"
+    class="botao-relatorio"
+    onclick="abrirFiados()">
+
+    📒 Controle de FIADO
+
+</button>
+
+
 <div id="areaRelatorio"
      class="area-relatorio oculto">
 
@@ -499,6 +509,29 @@ Sistema de vendas
     <div id="resumoRelatorio" class="grade-relatorio oculto"></div>
 
     <div id="listaRelatorio" class="tabela-relatorio oculto"></div>
+
+</div>
+
+
+<div id="areaFiados" class="area-relatorio oculto">
+
+    <h2>📒 Controle de FIADO</h2>
+
+    <button class="botao-confirmar" onclick="carregarFiados()">
+        🔄 Atualizar lista
+    </button>
+
+    <button class="botao-voltar" onclick="fecharFiados()">
+        ⬅️ Voltar para a venda
+    </button>
+
+    <div id="mensagemFiados" class="info" style="margin-top:15px; padding:15px;">
+        Consultando valores em aberto...
+    </div>
+
+    <div id="resumoFiados" class="grade-relatorio oculto"></div>
+
+    <div id="listaFiados" class="tabela-relatorio oculto"></div>
 
 </div>
 
@@ -914,6 +947,24 @@ Sistema de vendas
         id="textoClientePagamento"
         class="pequeno">
         Informe o cliente.
+    </div>
+
+    <div id="camposDetalhesFiado" class="oculto">
+
+        <div class="campo">
+            <label for="telefoneFiado">Telefone do cliente</label>
+            <input
+                id="telefoneFiado"
+                type="tel"
+                inputmode="tel"
+                placeholder="Ex.: (91) 99999-9999">
+        </div>
+
+        <div class="campo">
+            <label for="vencimentoFiado">Data de vencimento</label>
+            <input id="vencimentoFiado" type="date">
+        </div>
+
     </div>
 
 </div>
@@ -2351,6 +2402,142 @@ function continuarVenda() {
    RELATÓRIO DE VENDAS
 ========================================= */
 
+function abrirFiados() {
+    document.getElementById("areaRelatorio").classList.add("oculto");
+    document.getElementById("areaFiados").classList.remove("oculto");
+    document.getElementById("areaFiados").scrollIntoView({ behavior: "smooth" });
+    carregarFiados();
+}
+
+function fecharFiados() {
+    document.getElementById("areaFiados").classList.add("oculto");
+    document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
+}
+
+function carregarFiados() {
+    if (!usuarioAtual || !usuarioAtual.idAparelho) {
+        alert("O aparelho precisa estar identificado.");
+        return;
+    }
+
+    const mensagem = document.getElementById("mensagemFiados");
+    mensagem.className = "info";
+    mensagem.textContent = "Consultando FIADOS...";
+    const callback = "receberFiados_" + Date.now();
+    const script = document.createElement("script");
+
+    window[callback] = function(resultado) {
+        try { exibirFiados(resultado); }
+        finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+
+    script.src = URL_APPS_SCRIPT +
+        "?acao=buscarFiados" +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        mensagem.className = "erro";
+        mensagem.textContent = "Não foi possível consultar os FIADOS.";
+    };
+    document.body.appendChild(script);
+}
+
+function exibirFiados(resultado) {
+    const mensagem = document.getElementById("mensagemFiados");
+    const resumo = document.getElementById("resumoFiados");
+    const lista = document.getElementById("listaFiados");
+
+    if (!resultado || !resultado.sucesso) {
+        mensagem.className = "erro";
+        mensagem.textContent = resultado && resultado.mensagem
+            ? resultado.mensagem : "Não foi possível consultar os FIADOS.";
+        return;
+    }
+
+    const fiados = resultado.fiados || [];
+    const totais = resultado.totais || { original: 0, pago: 0, saldo: 0 };
+    mensagem.className = fiados.length ? "sucesso" : "info";
+    mensagem.textContent = fiados.length
+        ? fiados.length + " registro(s) encontrado(s)."
+        : "Nenhum FIADO encontrado.";
+
+    resumo.innerHTML = [
+        ["Valor original", totais.original],
+        ["Valor pago", totais.pago],
+        ["Saldo a receber", totais.saldo]
+    ].map(function(item) {
+        return "<div class=\"cartao-relatorio\"><span>" +
+            escaparHTML(item[0]) + "</span><strong>R$ " +
+            formatarMoeda(item[1]) + "</strong></div>";
+    }).join("");
+    resumo.classList.remove("oculto");
+
+    if (!fiados.length) {
+        lista.classList.add("oculto");
+        return;
+    }
+
+    let html = "<table><thead><tr><th>Cliente</th><th>Telefone</th>" +
+        "<th>Venda</th><th>Vencimento</th><th>Original</th><th>Pago</th>" +
+        "<th>Saldo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>";
+
+    fiados.forEach(function(fiado) {
+        const botao = resultado.acessoTotal && fiado.saldo > 0
+            ? "<button class=\"botao-adicionar\" style=\"min-width:150px\" " +
+              "onclick=\"pagarFiado('" + escaparHTML(fiado.id) + "'," + fiado.saldo + ")\">" +
+              "💵 Registrar pagamento</button>"
+            : "—";
+        html += "<tr><td>" + escaparHTML(fiado.cliente) +
+            "</td><td>" + escaparHTML(fiado.telefone) +
+            "</td><td>" + escaparHTML(fiado.numeroVenda) +
+            "</td><td>" + escaparHTML(fiado.vencimento) +
+            "</td><td>R$ " + formatarMoeda(fiado.original) +
+            "</td><td>R$ " + formatarMoeda(fiado.pago) +
+            "</td><td>R$ " + formatarMoeda(fiado.saldo) +
+            "</td><td>" + escaparHTML(fiado.situacao) +
+            "</td><td>" + botao + "</td></tr>";
+    });
+    lista.innerHTML = html + "</tbody></table>";
+    lista.classList.remove("oculto");
+}
+
+function pagarFiado(idFiado, saldo) {
+    const informado = prompt(
+        "Saldo atual: R$ " + formatarMoeda(saldo) +
+        "\n\nInforme o valor recebido:"
+    );
+    if (informado === null) return;
+    const valor = Number(String(informado).replace(",", "."));
+    if (!(valor > 0) || valor > Number(saldo) + 0.005) {
+        alert("Informe um valor válido, limitado ao saldo do FIADO.");
+        return;
+    }
+
+    const callback = "receberPagamentoFiado_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            alert(resultado && resultado.sucesso
+                ? "✅ Pagamento registrado com sucesso."
+                : "❌ " + (resultado && resultado.mensagem ? resultado.mensagem : "Erro ao registrar."));
+            if (resultado && resultado.sucesso) carregarFiados();
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT +
+        "?acao=registrarPagamentoFiado" +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&idFiado=" + encodeURIComponent(idFiado) +
+        "&valor=" + encodeURIComponent(valor) +
+        "&callback=" + encodeURIComponent(callback);
+    document.body.appendChild(script);
+}
+
 function configurarAcessoRelatorio() {
 
     const botao = document.getElementById("botaoRelatorio");
@@ -2596,6 +2783,9 @@ function alterarFormaPagamento() {
                 "clienteFiado"
             );
 
+    const detalhesFiado =
+        document.getElementById("camposDetalhesFiado");
+
 
     /*
        FIADO
@@ -2618,6 +2808,8 @@ function alterarFormaPagamento() {
 
         texto.textContent =
             "Informe o cliente do FIADO.";
+
+        detalhesFiado.classList.remove("oculto");
 
 
         return;
@@ -2646,6 +2838,8 @@ function alterarFormaPagamento() {
         texto.textContent =
             "Informe o cliente relacionado à permuta.";
 
+        detalhesFiado.classList.add("oculto");
+
 
         return;
     }
@@ -2661,6 +2855,12 @@ function alterarFormaPagamento() {
 
 
     input.value = "";
+
+    detalhesFiado.classList.add("oculto");
+
+    document.getElementById("telefoneFiado").value = "";
+
+    document.getElementById("vencimentoFiado").value = "";
 
 }
 
@@ -2787,6 +2987,10 @@ function adicionarPagamento() {
 
 let cliente = "";
 
+let telefone = "";
+
+let vencimento = "";
+
 
 if (
     forma === "FIADO" ||
@@ -2824,6 +3028,40 @@ if (
 
     }
 
+
+    if (
+        forma === "FIADO" &&
+        pagamentos.some(function(pagamento) {
+            return pagamento.forma === "FIADO";
+        })
+    ) {
+        alert("Inclua somente um lançamento de FIADO por venda.");
+        return;
+    }
+
+    if (forma === "FIADO") {
+
+        telefone = document
+            .getElementById("telefoneFiado")
+            .value
+            .trim();
+
+        vencimento = document
+            .getElementById("vencimentoFiado")
+            .value;
+
+        if (!telefone) {
+            alert("Informe o telefone do cliente do FIADO.");
+            return;
+        }
+
+        if (!vencimento) {
+            alert("Informe a data de vencimento do FIADO.");
+            return;
+        }
+
+    }
+
 }
 
 
@@ -2833,7 +3071,11 @@ if (
 
         valor: valor,
 
-        cliente: cliente
+        cliente: cliente,
+
+        telefone: telefone,
+
+        vencimento: vencimento
 
     });
 
@@ -2861,6 +3103,12 @@ if (
             "clienteFiado"
         )
         .value = "";
+
+    document.getElementById("telefoneFiado").value = "";
+
+    document.getElementById("vencimentoFiado").value = "";
+
+    document.getElementById("camposDetalhesFiado").classList.add("oculto");
 
 
     document
@@ -3005,6 +3253,10 @@ function atualizarPagamentos() {
                                 ${escaparHTML(
                                     pagamento.cliente
                                 )}
+                                <br>Telefone:
+                                ${escaparHTML(pagamento.telefone || "")}
+                                <br>Vencimento:
+                                ${escaparHTML(formatarDataBrasileira(pagamento.vencimento))}
                             </div>`
 
                             :
@@ -3289,6 +3541,10 @@ function finalizarVenda() {
     let fiado = 0;
 
     let clienteFiado = "";
+
+    let telefoneFiado = "";
+
+    let vencimentoFiado = "";
       
       let clientePermuta = "";
 
@@ -3357,6 +3613,12 @@ function finalizarVenda() {
 
     clienteFiado =
         pagamento.cliente || "";
+
+    telefoneFiado =
+        pagamento.telefone || "";
+
+    vencimentoFiado =
+        pagamento.vencimento || "";
 
 }
 
@@ -3440,6 +3702,12 @@ else if (
 
        clienteFiado:
     clienteFiado,
+
+telefoneFiado:
+    telefoneFiado,
+
+vencimentoFiado:
+    vencimentoFiado,
 
 clientePermuta:
     clientePermuta,
@@ -3892,6 +4160,14 @@ function formatarMoeda(valor) {
 
     );
 
+}
+
+
+function formatarDataBrasileira(data) {
+    if (!data) return "";
+    const partes = String(data).split("-");
+    if (partes.length !== 3) return String(data);
+    return partes[2] + "/" + partes[1] + "/" + partes[0];
 }
 
 
