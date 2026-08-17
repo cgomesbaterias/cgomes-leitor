@@ -460,6 +460,7 @@ Sistema de vendas
 
 
 <button
+    id="botaoRelatorio"
     class="botao-relatorio"
     onclick="abrirRelatorio()">
 
@@ -512,6 +513,37 @@ Sistema de vendas
 
 
 <div id="reader"></div>
+
+
+<div class="resumo">
+
+    <h3>⌨️ Digitar código do produto</h3>
+
+    <div class="pequeno">
+        Use esta opção quando a câmera não conseguir ler o código de barras.
+    </div>
+
+    <div class="campo">
+        <label for="codigoProdutoManual">Código do produto</label>
+        <input
+            id="codigoProdutoManual"
+            type="text"
+            placeholder="Ex.: B100GCE"
+            autocomplete="off"
+            autocapitalize="characters"
+            oninput="this.value = this.value.toUpperCase()"
+            onkeydown="if (event.key === 'Enter') { event.preventDefault(); buscarProdutoDigitado(); }">
+    </div>
+
+    <button
+        class="botao-confirmar"
+        onclick="buscarProdutoDigitado()">
+
+        🔍 Buscar produto
+
+    </button>
+
+</div>
 
 
 <div id="resultado"
@@ -1200,6 +1232,8 @@ function receberDispositivo(resultado) {
 
     configurarComissaoFrete();
 
+    configurarAcessoRelatorio();
+
 
     mostrarResultadoDispositivo(
 
@@ -1542,6 +1576,44 @@ function buscarProduto(codigo) {
 
 
 /* =========================================
+   BUSCAR PRODUTO PELO CÓDIGO DIGITADO
+========================================= */
+
+function buscarProdutoDigitado() {
+
+    const campo = document.getElementById("codigoProdutoManual");
+    const codigo = String(campo.value || "").trim().toUpperCase();
+    const resultado = document.getElementById("resultado");
+
+    if (!codigo) {
+        alert("Digite o código do produto.");
+        campo.focus();
+        return;
+    }
+
+    resultado.className = "info";
+    resultado.innerHTML =
+        "<strong>Código digitado:</strong><br><br>" +
+        escaparHTML(codigo) +
+        "<br><br>Consultando produto...";
+
+    const consultar = function() {
+        document.getElementById("reader").innerHTML = "";
+        buscarProduto(codigo);
+    };
+
+    if (leitor && leitorAtivo) {
+        leitorAtivo = false;
+        leitor.stop()
+            .then(consultar)
+            .catch(consultar);
+    } else {
+        consultar();
+    }
+}
+
+
+/* =========================================
    RECEBER PRODUTO
 ========================================= */
 
@@ -1576,6 +1648,10 @@ function receberProduto(resultado) {
 
 
     produtoPendente = resultado;
+
+    document
+        .getElementById("codigoProdutoManual")
+        .value = "";
 
 
     document
@@ -2275,6 +2351,20 @@ function continuarVenda() {
    RELATÓRIO DE VENDAS
 ========================================= */
 
+function configurarAcessoRelatorio() {
+
+    const botao = document.getElementById("botaoRelatorio");
+
+    if (!usuarioAtual || !botao) {
+        return;
+    }
+
+    botao.textContent =
+        usuarioAtual.perfil === "LOJA"
+            ? "📊 Relatório de todas as vendas"
+            : "📊 Relatório das minhas vendas";
+}
+
 function abrirRelatorio() {
 
     const hoje = new Date();
@@ -2307,6 +2397,11 @@ function carregarRelatorio() {
     const dataFinal = document.getElementById("relatorioDataFinal").value;
     const mensagem = document.getElementById("mensagemRelatorio");
 
+    if (!usuarioAtual || !usuarioAtual.idAparelho) {
+        alert("O aparelho precisa estar identificado para consultar o relatório.");
+        return;
+    }
+
     if (!dataInicial || !dataFinal) {
         alert("Informe a data inicial e a data final.");
         return;
@@ -2337,6 +2432,7 @@ function carregarRelatorio() {
         "?acao=buscarRelatorioVendas" +
         "&dataInicial=" + encodeURIComponent(dataInicial) +
         "&dataFinal=" + encodeURIComponent(dataFinal) +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
         "&callback=" + encodeURIComponent(nomeCallback);
 
     script.onerror = function() {
@@ -2367,10 +2463,16 @@ function exibirRelatorio(resultado) {
 
     const totais = resultado.totais;
     const vendas = resultado.vendas || [];
+    const acessoTotal = resultado.acesso && resultado.acesso.acessoTotal;
+    const descricaoAcesso = acessoTotal
+        ? " Exibindo todas as vendas."
+        : " Exibindo somente as suas vendas/entregas.";
     mensagem.className = vendas.length ? "sucesso" : "info";
     mensagem.textContent = vendas.length
-        ? vendas.length + (vendas.length === 1 ? " venda encontrada." : " vendas encontradas.")
-        : "Nenhuma venda encontrada no período.";
+        ? vendas.length +
+          (vendas.length === 1 ? " venda encontrada." : " vendas encontradas.") +
+          descricaoAcesso
+        : "Nenhuma venda encontrada no período." + descricaoAcesso;
 
     const cartoes = [
         ["Quantidade de vendas", String(totais.quantidade)],
