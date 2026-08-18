@@ -947,7 +947,7 @@ Sistema de vendas
         <label><input id="desejaDocumentoFiscal" type="checkbox" onchange="alternarDadosFiscais()"> Cliente deseja documento fiscal</label>
         <div id="dadosClienteFiscal" class="oculto">
             <div class="campo"><label>Nome completo *</label><input id="fiscalNome" type="text"></div>
-            <div class="campo"><label>CPF *</label><input id="fiscalCpf" type="text" inputmode="numeric" placeholder="Somente números"></div>
+            <div class="campo"><label>CPF *</label><input id="fiscalCpf" type="text" inputmode="numeric" maxlength="11" placeholder="11 números" oninput="formatarCpfFiscal(this)"></div>
             <div class="campo"><label>CEP *</label><input id="fiscalCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscarCepFiscal()"></div>
             <button type="button" class="botao-confirmar" onclick="buscarCepFiscal()">🔎 Buscar endereço pelo CEP</button>
             <div id="mensagemCepFiscal" class="pequeno"></div>
@@ -958,7 +958,7 @@ Sistema de vendas
             <div class="campo"><label>Cidade *</label><input id="fiscalCidade" type="text"></div>
             <div class="campo"><label>UF *</label><input id="fiscalUf" type="text" maxlength="2"></div>
             <div class="campo"><label>E-mail *</label><input id="fiscalEmail" type="email"></div>
-            <div class="campo"><label>Celular com DDD *</label><input id="fiscalCelular" type="tel" placeholder="(91) 99999-9999"></div>
+            <div class="campo"><label>Celular com DDD *</label><input id="fiscalCelular" type="tel" inputmode="numeric" maxlength="14" placeholder="(91) 999999999" oninput="formatarCelularFiscal(this)"></div>
         </div>
     </div>
 
@@ -3746,6 +3746,19 @@ function alternarDadosFiscais() {
     document.getElementById("dadosClienteFiscal").classList.toggle("oculto", !marcado);
 }
 
+function formatarCpfFiscal(campo) {
+    campo.value = campo.value.replace(/\D/g, "").slice(0, 11);
+}
+
+function formatarCelularFiscal(campo) {
+    const numeros = campo.value.replace(/\D/g, "").slice(0, 11);
+    campo.value = numeros.length > 2
+        ? "(" + numeros.slice(0, 2) + ") " + numeros.slice(2)
+        : numeros.length
+            ? "(" + numeros
+            : "";
+}
+
 async function buscarCepFiscal() {
     const cep = document.getElementById("fiscalCep").value.replace(/\D/g, "");
     const mensagem = document.getElementById("mensagemCepFiscal");
@@ -3794,7 +3807,7 @@ function obterDadosClienteFiscal_() {
     if (dados.cep.length !== 8) { alert("Informe um CEP com 8 números."); return false; }
     if (dados.uf.length !== 2) { alert("Informe a UF com 2 letras."); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) { alert("Informe um e-mail válido."); return false; }
-    if (dados.celular.length < 10 || dados.celular.length > 11) { alert("Informe o celular com DDD."); return false; }
+    if (dados.celular.length !== 11) { alert("Informe o celular no formato (XX) XXXXXXXXX."); return false; }
     return dados;
 }
 
