@@ -947,6 +947,9 @@ Sistema de vendas
     <div class="fiado-box">
         <label><input id="desejaDocumentoFiscal" type="checkbox" onchange="alternarDadosFiscais()"> Cliente deseja documento fiscal</label>
         <div id="dadosClienteFiscal" class="oculto">
+            <div class="campo"><label>Buscar cliente por CPF ou celular</label><input id="buscaClienteFiscal" type="text" inputmode="numeric" maxlength="14" placeholder="Digite 11 números"></div>
+            <button type="button" class="botao-adicionar" onclick="buscarClienteFiscal()">👤 Buscar cliente cadastrado</button>
+            <div id="mensagemBuscaClienteFiscal" class="pequeno"></div>
             <div class="campo"><label>Nome completo *</label><input id="fiscalNome" type="text"></div>
             <div class="campo"><label>CPF *</label><input id="fiscalCpf" type="text" inputmode="numeric" maxlength="11" placeholder="11 números" oninput="formatarCpfFiscal(this)"></div>
             <div class="campo"><label>CEP *</label><input id="fiscalCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscarCepFiscal()"></div>
@@ -2484,6 +2487,7 @@ function continuarVenda() {
     pagamentos = [];
 
     document.getElementById("desejaDocumentoFiscal").checked = false;
+    limparDadosFiscais_();
     alternarDadosFiscais();
 
 
@@ -3749,6 +3753,18 @@ function alternarDadosFiscais() {
     document.getElementById("dadosClienteFiscal").classList.toggle("oculto", !marcado);
 }
 
+function limparDadosFiscais_() {
+    [
+        "buscaClienteFiscal", "fiscalNome", "fiscalCpf", "fiscalCep",
+        "fiscalLogradouro", "fiscalNumero", "fiscalComplemento", "fiscalBairro",
+        "fiscalCidade", "fiscalUf", "fiscalEmail", "fiscalCelular"
+    ].forEach(function(id) {
+        document.getElementById(id).value = "";
+    });
+    document.getElementById("mensagemBuscaClienteFiscal").textContent = "";
+    document.getElementById("mensagemCepFiscal").textContent = "";
+}
+
 function formatarCpfFiscal(campo) {
     campo.value = campo.value.replace(/\D/g, "").slice(0, 11);
 }
@@ -3760,6 +3776,51 @@ function formatarCelularFiscal(campo) {
         : numeros.length
             ? "(" + numeros
             : "";
+}
+
+function buscarClienteFiscal() {
+    const documento = document.getElementById("buscaClienteFiscal").value.replace(/\D/g, "");
+    const mensagem = document.getElementById("mensagemBuscaClienteFiscal");
+    if (documento.length !== 11) {
+        mensagem.textContent = "Informe um CPF ou celular com 11 números.";
+        return;
+    }
+    mensagem.textContent = "Buscando cliente...";
+    const callback = "receberClienteFiscal_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) {
+                mensagem.textContent = resultado && resultado.mensagem ? resultado.mensagem : "Cliente não encontrado.";
+                return;
+            }
+            const c = resultado.cliente || {};
+            document.getElementById("fiscalNome").value = c.nome || "";
+            document.getElementById("fiscalCpf").value = c.cpf || "";
+            document.getElementById("fiscalCep").value = c.cep || "";
+            document.getElementById("fiscalLogradouro").value = c.logradouro || "";
+            document.getElementById("fiscalNumero").value = c.numero || "";
+            document.getElementById("fiscalComplemento").value = c.complemento || "";
+            document.getElementById("fiscalBairro").value = c.bairro || "";
+            document.getElementById("fiscalCidade").value = c.cidade || "";
+            document.getElementById("fiscalUf").value = c.uf || "";
+            document.getElementById("fiscalEmail").value = c.email || "";
+            const celular = document.getElementById("fiscalCelular");
+            celular.value = c.celular || "";
+            formatarCelularFiscal(celular);
+            mensagem.textContent = "Cliente encontrado. Confira os dados antes de finalizar.";
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT + "?acao=buscarClienteFiscal&documento=" + encodeURIComponent(documento) + "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        mensagem.textContent = "Não foi possível consultar o cliente.";
+        try { delete window[callback]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+    };
+    document.body.appendChild(script);
 }
 
 async function buscarCepFiscal() {
