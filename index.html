@@ -952,15 +952,6 @@ Sistema de vendas
     <div id="camposDetalhesFiado" class="oculto">
 
         <div class="campo">
-            <label for="telefoneFiado">Telefone do cliente</label>
-            <input
-                id="telefoneFiado"
-                type="tel"
-                inputmode="tel"
-                placeholder="Ex.: (91) 99999-9999">
-        </div>
-
-        <div class="campo">
             <label for="vencimentoFiado">Data de vencimento</label>
             <input id="vencimentoFiado" type="date">
         </div>
@@ -2491,7 +2482,7 @@ function exibirFiados(resultado) {
               "💵 Registrar pagamento</button>"
             : "—";
         html += "<tr><td>" + escaparHTML(fiado.cliente) +
-            "</td><td>" + escaparHTML(fiado.telefone) +
+            "</td><td>" + escaparHTML(fiado.telefone || "") +
             "</td><td>" + escaparHTML(fiado.numeroVenda) +
             "</td><td>" + escaparHTML(fiado.vencimento) +
             "</td><td>R$ " + formatarMoeda(fiado.original) +
@@ -2858,8 +2849,6 @@ function alterarFormaPagamento() {
 
     detalhesFiado.classList.add("oculto");
 
-    document.getElementById("telefoneFiado").value = "";
-
     document.getElementById("vencimentoFiado").value = "";
 
 }
@@ -2987,8 +2976,6 @@ function adicionarPagamento() {
 
 let cliente = "";
 
-let telefone = "";
-
 let vencimento = "";
 
 
@@ -3041,19 +3028,9 @@ if (
 
     if (forma === "FIADO") {
 
-        telefone = document
-            .getElementById("telefoneFiado")
-            .value
-            .trim();
-
         vencimento = document
             .getElementById("vencimentoFiado")
             .value;
-
-        if (!telefone) {
-            alert("Informe o telefone do cliente do FIADO.");
-            return;
-        }
 
         if (!vencimento) {
             alert("Informe a data de vencimento do FIADO.");
@@ -3072,8 +3049,6 @@ if (
         valor: valor,
 
         cliente: cliente,
-
-        telefone: telefone,
 
         vencimento: vencimento
 
@@ -3103,8 +3078,6 @@ if (
             "clienteFiado"
         )
         .value = "";
-
-    document.getElementById("telefoneFiado").value = "";
 
     document.getElementById("vencimentoFiado").value = "";
 
@@ -3253,8 +3226,6 @@ function atualizarPagamentos() {
                                 ${escaparHTML(
                                     pagamento.cliente
                                 )}
-                                <br>Telefone:
-                                ${escaparHTML(pagamento.telefone || "")}
                                 <br>Vencimento:
                                 ${escaparHTML(formatarDataBrasileira(pagamento.vencimento))}
                             </div>`
@@ -3542,8 +3513,6 @@ function finalizarVenda() {
 
     let clienteFiado = "";
 
-    let telefoneFiado = "";
-
     let vencimentoFiado = "";
       
       let clientePermuta = "";
@@ -3613,9 +3582,6 @@ function finalizarVenda() {
 
     clienteFiado =
         pagamento.cliente || "";
-
-    telefoneFiado =
-        pagamento.telefone || "";
 
     vencimentoFiado =
         pagamento.vencimento || "";
@@ -3702,9 +3668,6 @@ else if (
 
        clienteFiado:
     clienteFiado,
-
-telefoneFiado:
-    telefoneFiado,
 
 vencimentoFiado:
     vencimentoFiado,
