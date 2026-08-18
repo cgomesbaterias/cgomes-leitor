@@ -943,6 +943,25 @@ Sistema de vendas
 <div id="areaPagamentos"
      class="area-pagamentos oculto">
 
+    <div class="fiado-box">
+        <label><input id="desejaDocumentoFiscal" type="checkbox" onchange="alternarDadosFiscais()"> Cliente deseja documento fiscal</label>
+        <div id="dadosClienteFiscal" class="oculto">
+            <div class="campo"><label>Nome completo *</label><input id="fiscalNome" type="text"></div>
+            <div class="campo"><label>CPF *</label><input id="fiscalCpf" type="text" inputmode="numeric" placeholder="Somente números"></div>
+            <div class="campo"><label>CEP *</label><input id="fiscalCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscarCepFiscal()"></div>
+            <button type="button" class="botao-confirmar" onclick="buscarCepFiscal()">🔎 Buscar endereço pelo CEP</button>
+            <div id="mensagemCepFiscal" class="pequeno"></div>
+            <div class="campo"><label>Logradouro *</label><input id="fiscalLogradouro" type="text"></div>
+            <div class="campo"><label>Número *</label><input id="fiscalNumero" type="text"></div>
+            <div class="campo"><label>Complemento</label><input id="fiscalComplemento" type="text"></div>
+            <div class="campo"><label>Bairro *</label><input id="fiscalBairro" type="text"></div>
+            <div class="campo"><label>Cidade *</label><input id="fiscalCidade" type="text"></div>
+            <div class="campo"><label>UF *</label><input id="fiscalUf" type="text" maxlength="2"></div>
+            <div class="campo"><label>E-mail *</label><input id="fiscalEmail" type="email"></div>
+            <div class="campo"><label>Celular com DDD *</label><input id="fiscalCelular" type="tel" placeholder="(91) 99999-9999"></div>
+        </div>
+    </div>
+
     <h2>💳 Pagamento</h2>
 
 
@@ -2461,6 +2480,9 @@ function continuarVenda() {
 
     pagamentos = [];
 
+    document.getElementById("desejaDocumentoFiscal").checked = false;
+    alternarDadosFiscais();
+
 
     document
         .getElementById(
@@ -2988,8 +3010,9 @@ function baixarPlanilhaBling() {
             return;
         }
 
+        const fiscal = venda.clienteFiscal || {};
         const cliente = String(
-            venda.clienteFiado || venda.clientePermuta || "Consumidor Final"
+            fiscal.nome || venda.clienteFiado || venda.clientePermuta || "Consumidor Final"
         ).trim() || "Consumidor Final";
         const data = String(venda.dataHora || "").substring(0, 10);
         const dataPedido = data.split("/").reverse().join("");
@@ -3001,8 +3024,10 @@ function baixarPlanilhaBling() {
 
         itens.forEach(function(item) {
             linhas.push([
-                numeroPedido, cliente, data, "", "", "", "", "", "", "", "",
-                "", "", "", item.produto || "", String(item.codigo || ""), "UN",
+                numeroPedido, cliente, data, fiscal.cpf || "", fiscal.logradouro || "",
+                fiscal.bairro || "", fiscal.numero || "", fiscal.complemento || "",
+                fiscal.cep || "", fiscal.cidade || "", fiscal.uf || "", "",
+                fiscal.celular || "", fiscal.email || "", item.produto || "", String(item.codigo || ""), "UN",
                 Number(item.quantidade) || 0, Number(item.preco) || 0,
                 Number(item.subtotal) || 0, Number(venda.totalVenda) || 0,
                 Number(venda.frete) || 0, 0, 0, "", "", "", "", "", "", "", "",
@@ -3716,6 +3741,63 @@ function atualizarPagamentos() {
    REMOVER PAGAMENTO
 ========================================= */
 
+function alternarDadosFiscais() {
+    const marcado = document.getElementById("desejaDocumentoFiscal").checked;
+    document.getElementById("dadosClienteFiscal").classList.toggle("oculto", !marcado);
+}
+
+async function buscarCepFiscal() {
+    const cep = document.getElementById("fiscalCep").value.replace(/\D/g, "");
+    const mensagem = document.getElementById("mensagemCepFiscal");
+    if (cep.length !== 8) {
+        mensagem.textContent = "Informe um CEP com 8 números.";
+        return;
+    }
+    mensagem.textContent = "Buscando endereço...";
+    try {
+        const resposta = await fetch("https://viacep.com.br/ws/" + cep + "/json/");
+        const dados = await resposta.json();
+        if (!resposta.ok || dados.erro) throw new Error("CEP não encontrado");
+        document.getElementById("fiscalCep").value = dados.cep || cep;
+        document.getElementById("fiscalLogradouro").value = dados.logradouro || "";
+        document.getElementById("fiscalBairro").value = dados.bairro || "";
+        document.getElementById("fiscalCidade").value = dados.localidade || "";
+        document.getElementById("fiscalUf").value = dados.uf || "";
+        mensagem.textContent = "Endereço localizado. Informe o número e o complemento, se houver.";
+        (dados.logradouro ? document.getElementById("fiscalNumero") : document.getElementById("fiscalLogradouro")).focus();
+    } catch (erro) {
+        mensagem.textContent = "CEP não localizado. Preencha o endereço manualmente.";
+    }
+}
+
+function obterDadosClienteFiscal_() {
+    if (!document.getElementById("desejaDocumentoFiscal").checked) return null;
+    const dados = {
+        solicitado: true,
+        nome: document.getElementById("fiscalNome").value.trim(),
+        cpf: document.getElementById("fiscalCpf").value.replace(/\D/g, ""),
+        cep: document.getElementById("fiscalCep").value.replace(/\D/g, ""),
+        logradouro: document.getElementById("fiscalLogradouro").value.trim(),
+        numero: document.getElementById("fiscalNumero").value.trim(),
+        complemento: document.getElementById("fiscalComplemento").value.trim(),
+        bairro: document.getElementById("fiscalBairro").value.trim(),
+        cidade: document.getElementById("fiscalCidade").value.trim(),
+        uf: document.getElementById("fiscalUf").value.trim().toUpperCase(),
+        email: document.getElementById("fiscalEmail").value.trim(),
+        celular: document.getElementById("fiscalCelular").value.replace(/\D/g, "")
+    };
+    if (!dados.nome || !dados.logradouro || !dados.numero || !dados.bairro || !dados.cidade || !dados.uf || !dados.email) {
+        alert("Preencha todos os dados obrigatórios do cliente para o documento fiscal.");
+        return false;
+    }
+    if (dados.cpf.length !== 11) { alert("Informe um CPF com 11 números."); return false; }
+    if (dados.cep.length !== 8) { alert("Informe um CEP com 8 números."); return false; }
+    if (dados.uf.length !== 2) { alert("Informe a UF com 2 letras."); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) { alert("Informe um e-mail válido."); return false; }
+    if (dados.celular.length < 10 || dados.celular.length > 11) { alert("Informe o celular com DDD."); return false; }
+    return dados;
+}
+
 function removerPagamento(indice) {
 
 
@@ -3803,6 +3885,10 @@ function finalizarVenda() {
 
         return;
     }
+
+
+    const clienteFiscal = obterDadosClienteFiscal_();
+    if (clienteFiscal === false) return;
 
 
     /*
@@ -3997,6 +4083,9 @@ else if (
     */
 
     const dadosVenda = {
+
+        clienteFiscal:
+            clienteFiscal,
 
         usuarioAtual: {
 
@@ -4516,6 +4605,7 @@ function formatarMoeda(valor) {
 
 function exibirComprovante(resultado, dadosVenda) {
     const cliente = String(
+        (dadosVenda.clienteFiscal && dadosVenda.clienteFiscal.nome) ||
         dadosVenda.clienteFiado || dadosVenda.clientePermuta || "Consumidor Final"
     ).trim() || "Consumidor Final";
     const dataVenda = resultado.data || new Date().toLocaleDateString("pt-BR");
