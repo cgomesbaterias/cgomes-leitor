@@ -2903,6 +2903,7 @@ function baixarPlanilhaBling() {
 
     const linhas = [cabecalhos];
     let vendasSemItens = 0;
+    let vendasPagamentoMisto = 0;
 
     ultimoRelatorioVendas.vendas.forEach(function(venda) {
         const itens = venda.itens || [];
@@ -2917,8 +2918,10 @@ function baixarPlanilhaBling() {
         const data = String(venda.dataHora || "").substring(0, 10);
         const dataPedido = data.split("/").reverse().join("");
         const numeroPedido = dataPedido + "-" + String(venda.numero || "");
+        const quantidadeFormas = quantidadeFormasPagamentoBling_(venda);
         const pagamento = formaPagamentoBling_(venda);
         const observacoes = observacoesBling_(venda);
+        if (quantidadeFormas > 1) vendasPagamentoMisto++;
 
         itens.forEach(function(item) {
             linhas.push([
@@ -2928,7 +2931,7 @@ function baixarPlanilhaBling() {
                 Number(item.subtotal) || 0, Number(venda.totalVenda) || 0,
                 Number(venda.frete) || 0, 0, 0, "", "", "", "", "", "", "", "",
                 "", "", (Number(venda.frete) > 0 ? "R" : "S"), observacoes,
-                0, "", venda.usuario || "", pagamento, ""
+                (quantidadeFormas === 1 ? 1 : ""), "", venda.usuario || "", pagamento, ""
             ]);
         });
     });
@@ -2957,32 +2960,50 @@ function baixarPlanilhaBling() {
         String(periodo.dataFinal || "fim").replace(/-/g, "") + ".xlsx";
     XLSX.writeFile(arquivo, nome);
 
-    if (vendasSemItens > 0) {
-        alert(
-            "Planilha gerada. " + vendasSemItens +
-            (vendasSemItens === 1 ? " venda antiga não pôde" : " vendas antigas não puderam") +
-            " ser associada aos itens e ficou fora do arquivo."
+    const avisos = [];
+    if (vendasPagamentoMisto > 0) {
+        avisos.push(
+            vendasPagamentoMisto +
+            (vendasPagamentoMisto === 1
+                ? " venda possui pagamento misto e deverá ser ajustada manualmente no Bling"
+                : " vendas possuem pagamento misto e deverão ser ajustadas manualmente no Bling")
         );
+    }
+    if (vendasSemItens > 0) {
+        avisos.push(
+            vendasSemItens +
+            (vendasSemItens === 1
+                ? " venda antiga não pôde ser associada aos itens e ficou fora do arquivo"
+                : " vendas antigas não puderam ser associadas aos itens e ficaram fora do arquivo")
+        );
+    }
+    if (avisos.length) {
+        alert("Planilha gerada. Atenção: " + avisos.join("; ") + ".");
     }
 }
 
 function formaPagamentoBling_(venda) {
     const formas = [];
     [
-        ["PROPIG", venda.propig, "Cartão de Crédito"],
-        ["REDE", venda.rede, "Cartão de Crédito"],
-        ["PIX", venda.pix, "Pix"],
-        ["DINHEIRO", venda.dinheiro, "Dinheiro"],
-        ["FIADO", venda.fiado, "Crediário"],
-        ["PERMUTA", venda.permuta, ""]
+        ["PROPIG", venda.propig],
+        ["REDE", venda.rede],
+        ["PIX", venda.pix],
+        ["DINHEIRO", venda.dinheiro],
+        ["FIADO", venda.fiado],
+        ["PERMUTA", venda.permuta]
     ].forEach(function(item) {
-        if (Number(item[1]) > 0) formas.push(item[2]);
+        if (Number(item[1]) > 0) formas.push(item[0]);
     });
+    return formas.length === 1 ? formas[0] : "";
+}
 
-    const distintas = formas.filter(function(forma, indice) {
-        return forma && formas.indexOf(forma) === indice;
-    });
-    return distintas.length === 1 ? distintas[0] : "";
+function quantidadeFormasPagamentoBling_(venda) {
+    return [
+        venda.propig, venda.rede, venda.pix,
+        venda.dinheiro, venda.permuta, venda.fiado
+    ].filter(function(valor) {
+        return Number(valor) > 0;
+    }).length;
 }
 
 function observacoesBling_(venda) {
@@ -2994,6 +3015,7 @@ function observacoesBling_(venda) {
     ].forEach(function(item) {
         if (Number(item[1]) > 0) formas.push(item[0] + ": R$ " + formatarMoeda(item[1]));
     });
+    if (formas.length > 1) partes.push("PAGAMENTO MISTO - AJUSTAR MANUALMENTE NO BLING");
     if (formas.length) partes.push("Pagamentos: " + formas.join(" | "));
     return partes.join(" - ");
 }
