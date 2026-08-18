@@ -533,6 +533,8 @@ Sistema de vendas
 
     <div id="listaFiados" class="tabela-relatorio oculto"></div>
 
+    <div id="historicoFiados" class="tabela-relatorio oculto"></div>
+
 </div>
 
 
@@ -2440,11 +2442,13 @@ function exibirFiados(resultado) {
     const mensagem = document.getElementById("mensagemFiados");
     const resumo = document.getElementById("resumoFiados");
     const lista = document.getElementById("listaFiados");
+    const historico = document.getElementById("historicoFiados");
 
     if (!resultado || !resultado.sucesso) {
         mensagem.className = "erro";
         mensagem.textContent = resultado && resultado.mensagem
             ? resultado.mensagem : "Não foi possível consultar os FIADOS.";
+        historico.classList.add("oculto");
         return;
     }
 
@@ -2468,6 +2472,7 @@ function exibirFiados(resultado) {
 
     if (!fiados.length) {
         lista.classList.add("oculto");
+        historico.classList.add("oculto");
         return;
     }
 
@@ -2493,6 +2498,35 @@ function exibirFiados(resultado) {
     });
     lista.innerHTML = html + "</tbody></table>";
     lista.classList.remove("oculto");
+
+    const recebimentos = resultado.recebimentos || [];
+    if (!recebimentos.length) {
+        historico.classList.add("oculto");
+        return;
+    }
+
+    let htmlHistorico = "<h3>🧾 Histórico de recebimentos</h3>" +
+        "<table><thead><tr><th>Data/hora</th><th>Cliente</th><th>Venda</th>" +
+        "<th>Valor</th><th>Forma</th><th>Recebido por</th><th>Situação</th>" +
+        "<th>Ação</th></tr></thead><tbody>";
+
+    recebimentos.forEach(function(recebimento) {
+        const botaoEstorno = resultado.acessoTotal && recebimento.situacao === "ATIVO"
+            ? "<button class=\"botao-excluir\" style=\"min-width:110px\" " +
+              "onclick=\"estornarRecebimentoFiado('" + escaparHTML(recebimento.id) + "')\">" +
+              "↩️ Estornar</button>"
+            : "—";
+        htmlHistorico += "<tr><td>" + escaparHTML(recebimento.dataHora) +
+            "</td><td>" + escaparHTML(recebimento.cliente) +
+            "</td><td>" + escaparHTML(recebimento.idVenda) +
+            "</td><td>R$ " + formatarMoeda(recebimento.valor) +
+            "</td><td>" + escaparHTML(recebimento.formaPagamento) +
+            "</td><td>" + escaparHTML(recebimento.usuarioRecebeu) +
+            "</td><td>" + escaparHTML(recebimento.situacao) +
+            "</td><td>" + botaoEstorno + "</td></tr>";
+    });
+    historico.innerHTML = htmlHistorico + "</tbody></table>";
+    historico.classList.remove("oculto");
 }
 
 function pagarFiado(idFiado, saldo) {
@@ -2504,6 +2538,17 @@ function pagarFiado(idFiado, saldo) {
     const valor = Number(String(informado).replace(",", "."));
     if (!(valor > 0) || valor > Number(saldo) + 0.005) {
         alert("Informe um valor válido, limitado ao saldo do FIADO.");
+        return;
+    }
+
+    const formaDigitada = prompt(
+        "Informe a forma de pagamento:\n\n" +
+        "DINHEIRO, PIX, REDE ou PROPIG"
+    );
+    if (formaDigitada === null) return;
+    const formaPagamento = String(formaDigitada).trim().toUpperCase();
+    if (["DINHEIRO", "PIX", "REDE", "PROPIG"].indexOf(formaPagamento) === -1) {
+        alert("Forma inválida. Digite DINHEIRO, PIX, REDE ou PROPIG.");
         return;
     }
 
@@ -2525,6 +2570,30 @@ function pagarFiado(idFiado, saldo) {
         "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
         "&idFiado=" + encodeURIComponent(idFiado) +
         "&valor=" + encodeURIComponent(valor) +
+        "&formaPagamento=" + encodeURIComponent(formaPagamento) +
+        "&callback=" + encodeURIComponent(callback);
+    document.body.appendChild(script);
+}
+
+function estornarRecebimentoFiado(idRecebimento) {
+    if (!confirm("Confirma o estorno deste recebimento?")) return;
+    const callback = "receberEstornoFiado_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            alert(resultado && resultado.sucesso
+                ? "✅ Recebimento estornado com sucesso."
+                : "❌ " + (resultado && resultado.mensagem ? resultado.mensagem : "Erro no estorno."));
+            if (resultado && resultado.sucesso) carregarFiados();
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT +
+        "?acao=estornarRecebimentoFiado" +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&idRecebimento=" + encodeURIComponent(idRecebimento) +
         "&callback=" + encodeURIComponent(callback);
     document.body.appendChild(script);
 }
