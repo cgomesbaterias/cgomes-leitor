@@ -14,6 +14,10 @@
         type="text/javascript">
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+        type="text/javascript">
+</script>
+
 <style>
 
 body {
@@ -496,6 +500,12 @@ Sistema de vendas
 
     <button class="botao-confirmar" onclick="carregarRelatorio()">
         🔍 Consultar vendas
+    </button>
+
+    <button id="botaoExportarBling"
+            class="botao-adicionar oculto"
+            onclick="baixarPlanilhaBling()">
+        ⬇️ Baixar planilha para o Bling
     </button>
 
     <button class="botao-voltar" onclick="fecharRelatorio()">
@@ -1102,6 +1112,8 @@ let produtoPendente = null;
 let usuarioAtual = null;
 
 let pagamentos = [];
+
+let ultimoRelatorioVendas = null;
 
 let pagamentoFiadoAtual = null;
 
@@ -2778,6 +2790,8 @@ function exibirRelatorio(resultado) {
     const lista = document.getElementById("listaRelatorio");
 
     if (!resultado || !resultado.sucesso) {
+        ultimoRelatorioVendas = null;
+        document.getElementById("botaoExportarBling").classList.add("oculto");
         mensagem.className = "erro";
         mensagem.textContent = resultado && resultado.mensagem
             ? resultado.mensagem
@@ -2789,6 +2803,8 @@ function exibirRelatorio(resultado) {
 
     const totais = resultado.totais;
     const vendas = resultado.vendas || [];
+    ultimoRelatorioVendas = resultado;
+    document.getElementById("botaoExportarBling").classList.toggle("oculto", !vendas.length);
     const acessoTotal = resultado.acesso && resultado.acesso.acessoTotal;
     const descricaoAcesso = acessoTotal
         ? " Exibindo todas as vendas."
@@ -2857,6 +2873,129 @@ function exibirRelatorio(resultado) {
 
     lista.innerHTML = html + "</tbody></table>";
     lista.classList.remove("oculto");
+}
+
+function baixarPlanilhaBling() {
+    if (!ultimoRelatorioVendas || !(ultimoRelatorioVendas.vendas || []).length) {
+        alert("Consulte primeiro as vendas que deseja exportar.");
+        return;
+    }
+
+    if (typeof XLSX === "undefined") {
+        alert("Não foi possível carregar o gerador da planilha. Verifique a internet e tente novamente.");
+        return;
+    }
+
+    const cabecalhos = [
+        "Número pedido", "Nome Comprador", "Data", "CPF/CNPJ Comprador",
+        "Endereço Comprador", "Bairro Comprador", "Número Comprador",
+        "Complemento Comprador", "CEP Comprador", "Cidade Comprador",
+        "UF Comprador", "Telefone Comprador", "Celular Comprador",
+        "E-mail Comprador", "Produto", "SKU", "Un", "Quantidade",
+        "Valor Unitário", "Valor Total", "Total Pedido", "Valor Frete Pedido",
+        "Valor Desconto Pedido", "Outras despesas", "Nome Entrega",
+        "Endereço Entrega", "Número Entrega", "Complemento Entrega",
+        "Cidade Entrega", "UF Entrega", "CEP Entrega", "Bairro Entrega",
+        "Transportadora", "Serviço", "Tipo Frete", "Observações",
+        "Qtd Parcela", "Data Prevista", "Vendedor", "Forma Pagamento",
+        "ID Forma Pagamento"
+    ];
+
+    const linhas = [cabecalhos];
+    let vendasSemItens = 0;
+
+    ultimoRelatorioVendas.vendas.forEach(function(venda) {
+        const itens = venda.itens || [];
+        if (!itens.length) {
+            vendasSemItens++;
+            return;
+        }
+
+        const cliente = String(
+            venda.clienteFiado || venda.clientePermuta || "Consumidor Final"
+        ).trim() || "Consumidor Final";
+        const data = String(venda.dataHora || "").substring(0, 10);
+        const dataPedido = data.split("/").reverse().join("");
+        const numeroPedido = dataPedido + "-" + String(venda.numero || "");
+        const pagamento = formaPagamentoBling_(venda);
+        const observacoes = observacoesBling_(venda);
+
+        itens.forEach(function(item) {
+            linhas.push([
+                numeroPedido, cliente, data, "", "", "", "", "", "", "", "",
+                "", "", "", item.produto || "", String(item.codigo || ""), "UN",
+                Number(item.quantidade) || 0, Number(item.preco) || 0,
+                Number(item.subtotal) || 0, Number(venda.totalVenda) || 0,
+                Number(venda.frete) || 0, 0, 0, "", "", "", "", "", "", "", "",
+                "", "", (Number(venda.frete) > 0 ? "R" : "S"), observacoes,
+                0, "", venda.usuario || "", pagamento, ""
+            ]);
+        });
+    });
+
+    if (linhas.length === 1) {
+        alert("As vendas consultadas não possuem itens disponíveis para exportação.");
+        return;
+    }
+
+    const planilha = XLSX.utils.aoa_to_sheet(linhas);
+    planilha["!cols"] = cabecalhos.map(function(titulo) {
+        return { wch: Math.min(28, Math.max(10, titulo.length + 2)) };
+    });
+
+    for (let linha = 2; linha <= linhas.length; linha++) {
+        ["S", "T", "U", "V", "W", "X"].forEach(function(coluna) {
+            if (planilha[coluna + linha]) planilha[coluna + linha].z = "0.00";
+        });
+    }
+
+    const arquivo = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(arquivo, planilha, "modelo_pedido_venda");
+    const periodo = ultimoRelatorioVendas.periodo || {};
+    const nome = "vendas_bling_" +
+        String(periodo.dataInicial || "inicio").replace(/-/g, "") + "_a_" +
+        String(periodo.dataFinal || "fim").replace(/-/g, "") + ".xlsx";
+    XLSX.writeFile(arquivo, nome);
+
+    if (vendasSemItens > 0) {
+        alert(
+            "Planilha gerada. " + vendasSemItens +
+            (vendasSemItens === 1 ? " venda antiga não pôde" : " vendas antigas não puderam") +
+            " ser associada aos itens e ficou fora do arquivo."
+        );
+    }
+}
+
+function formaPagamentoBling_(venda) {
+    const formas = [];
+    [
+        ["PROPIG", venda.propig, "Cartão de Crédito"],
+        ["REDE", venda.rede, "Cartão de Crédito"],
+        ["PIX", venda.pix, "Pix"],
+        ["DINHEIRO", venda.dinheiro, "Dinheiro"],
+        ["FIADO", venda.fiado, "Crediário"],
+        ["PERMUTA", venda.permuta, ""]
+    ].forEach(function(item) {
+        if (Number(item[1]) > 0) formas.push(item[2]);
+    });
+
+    const distintas = formas.filter(function(forma, indice) {
+        return forma && formas.indexOf(forma) === indice;
+    });
+    return distintas.length === 1 ? distintas[0] : "";
+}
+
+function observacoesBling_(venda) {
+    const partes = ["Venda CGomes nº " + String(venda.numero || "")];
+    const formas = [];
+    [
+        ["PROPIG", venda.propig], ["REDE", venda.rede], ["PIX", venda.pix],
+        ["DINHEIRO", venda.dinheiro], ["PERMUTA", venda.permuta], ["FIADO", venda.fiado]
+    ].forEach(function(item) {
+        if (Number(item[1]) > 0) formas.push(item[0] + ": R$ " + formatarMoeda(item[1]));
+    });
+    if (formas.length) partes.push("Pagamentos: " + formas.join(" | "));
+    return partes.join(" - ");
 }
 
 
