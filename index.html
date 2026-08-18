@@ -152,6 +152,61 @@ button {
     background: #ede3ff;
 }
 
+.comprovante-venda {
+    margin-top: 22px;
+    padding: 18px;
+    background: #fff;
+    border: 2px dashed #555;
+    border-radius: 10px;
+}
+
+.comprovante-venda h2,
+.comprovante-venda .comprovante-subtitulo {
+    text-align: center;
+}
+
+.comprovante-venda table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+}
+
+.comprovante-venda th,
+.comprovante-venda td {
+    padding: 7px 4px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.comprovante-acoes {
+    margin-top: 15px;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #comprovanteVenda,
+    #comprovanteVenda * {
+        visibility: visible;
+    }
+
+    #comprovanteVenda {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        border: none;
+        box-sizing: border-box;
+    }
+
+    .comprovante-acoes {
+        display: none !important;
+    }
+}
+
 .botao-confirmar {
     background: #1a73e8;
     color: white;
@@ -1080,6 +1135,25 @@ Sistema de vendas
 </div>
 
 
+<div id="comprovanteVenda" class="comprovante-venda oculto">
+    <div id="conteudoComprovante"></div>
+
+    <div class="comprovante-acoes">
+        <button class="botao-confirmar" onclick="imprimirComprovante()">
+            🖨️ Imprimir comprovante
+        </button>
+
+        <button class="botao-adicionar" onclick="compartilharComprovante()">
+            📤 Compartilhar comprovante
+        </button>
+
+        <button class="botao-voltar" onclick="iniciarNovaVenda()">
+            ➕ Iniciar nova venda
+        </button>
+    </div>
+</div>
+
+
 </div>
 
 </div>
@@ -1114,6 +1188,8 @@ let usuarioAtual = null;
 let pagamentos = [];
 
 let ultimoRelatorioVendas = null;
+
+let ultimoComprovante = null;
 
 let pagamentoFiadoAtual = null;
 
@@ -4076,6 +4152,8 @@ itens:
                     resultado.sucesso
                 ) {
 
+                    exibirComprovante(resultado, dadosVenda);
+
                     /*
                        Venda gravada com sucesso.
                     */
@@ -4209,7 +4287,9 @@ itens:
                         escaparHTML(
                             resultado.numeroVenda
                         ) +
-                        " gravada com sucesso!</strong>";
+                        " gravada com sucesso!</strong>" +
+                        "<br><button class=\"botao-confirmar\" onclick=\"abrirComprovante()\">" +
+                        "🧾 Gerar comprovante (opcional)</button>";
 
 
                 }
@@ -4432,6 +4512,137 @@ function formatarMoeda(valor) {
 
     );
 
+}
+
+function exibirComprovante(resultado, dadosVenda) {
+    const cliente = String(
+        dadosVenda.clienteFiado || dadosVenda.clientePermuta || "Consumidor Final"
+    ).trim() || "Consumidor Final";
+    const dataVenda = resultado.data || new Date().toLocaleDateString("pt-BR");
+    const itens = dadosVenda.itens || [];
+    const formas = [];
+
+    Object.keys(dadosVenda.pagamentos || {}).forEach(function(forma) {
+        const valor = Number(dadosVenda.pagamentos[forma]) || 0;
+        if (valor > 0) formas.push({ forma: forma, valor: valor });
+    });
+
+    ultimoComprovante = {
+        numero: String(resultado.numeroVenda || ""),
+        data: dataVenda,
+        cliente: cliente,
+        usuario: dadosVenda.usuarioAtual.usuario || "",
+        perfil: dadosVenda.usuarioAtual.perfil || "",
+        itens: itens,
+        pagamentos: formas,
+        totalProdutos: Number(dadosVenda.totalProdutos) || 0,
+        frete: Number(dadosVenda.frete) || 0,
+        totalVenda: Number(resultado.totalVenda) || 0
+    };
+
+    let html =
+        "<h2>C GOMES BATERIAS</h2>" +
+        "<div class=\"comprovante-subtitulo\"><strong>COMPROVANTE DE VENDA</strong><br>" +
+        "<small>Documento não fiscal</small></div>" +
+        "<p><strong>Venda:</strong> " + escaparHTML(ultimoComprovante.numero) +
+        "<br><strong>Data:</strong> " + escaparHTML(ultimoComprovante.data) +
+        "<br><strong>Cliente:</strong> " + escaparHTML(cliente) +
+        "<br><strong>Atendimento:</strong> " + escaparHTML(ultimoComprovante.usuario) +
+        " (" + escaparHTML(ultimoComprovante.perfil) + ")</p>" +
+        "<table><thead><tr><th>Produto</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>";
+
+    itens.forEach(function(item) {
+        html += "<tr><td>" + escaparHTML(item.produto) +
+            "<br><small>" + escaparHTML(item.codigo) + "</small></td>" +
+            "<td>" + escaparHTML(item.quantidade) + "</td>" +
+            "<td>R$ " + formatarMoeda(item.preco) + "</td>" +
+            "<td>R$ " + formatarMoeda(item.subtotal) + "</td></tr>";
+    });
+
+    html += "</tbody></table>" +
+        "<p><strong>Produtos:</strong> R$ " + formatarMoeda(ultimoComprovante.totalProdutos);
+    if (ultimoComprovante.frete > 0) {
+        html += "<br><strong>Frete:</strong> R$ " + formatarMoeda(ultimoComprovante.frete);
+    }
+    html += "<br><strong>Total da venda: R$ " +
+        formatarMoeda(ultimoComprovante.totalVenda) + "</strong></p>" +
+        "<p><strong>Pagamento:</strong><br>" +
+        formas.map(function(item) {
+            return escaparHTML(item.forma) + ": R$ " + formatarMoeda(item.valor);
+        }).join("<br>") + "</p>" +
+        "<p style=\"text-align:center\"><small>Obrigado pela preferência!</small></p>";
+
+    document.getElementById("conteudoComprovante").innerHTML = html;
+    document.getElementById("comprovanteVenda").classList.add("oculto");
+}
+
+function abrirComprovante() {
+    if (!ultimoComprovante) {
+        alert("Nenhum comprovante está disponível.");
+        return;
+    }
+    document.getElementById("comprovanteVenda").classList.remove("oculto");
+    document.getElementById("comprovanteVenda").scrollIntoView({ behavior: "smooth" });
+}
+
+function textoComprovante_() {
+    if (!ultimoComprovante) return "";
+    const linhas = [
+        "C GOMES BATERIAS",
+        "COMPROVANTE DE VENDA - DOCUMENTO NÃO FISCAL",
+        "Venda: " + ultimoComprovante.numero,
+        "Data: " + ultimoComprovante.data,
+        "Cliente: " + ultimoComprovante.cliente,
+        "Atendimento: " + ultimoComprovante.usuario,
+        "",
+        "PRODUTOS"
+    ];
+
+    ultimoComprovante.itens.forEach(function(item) {
+        linhas.push(
+            item.produto + " | " + item.quantidade + " x R$ " +
+            formatarMoeda(item.preco) + " = R$ " + formatarMoeda(item.subtotal)
+        );
+    });
+
+    linhas.push("", "Total: R$ " + formatarMoeda(ultimoComprovante.totalVenda), "", "PAGAMENTO");
+    ultimoComprovante.pagamentos.forEach(function(item) {
+        linhas.push(item.forma + ": R$ " + formatarMoeda(item.valor));
+    });
+    linhas.push("", "Obrigado pela preferência!");
+    return linhas.join("\n");
+}
+
+function imprimirComprovante() {
+    if (!ultimoComprovante) return;
+    window.print();
+}
+
+async function compartilharComprovante() {
+    const texto = textoComprovante_();
+    if (!texto) return;
+
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: "Comprovante C Gomes", text: texto });
+        } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(texto);
+            alert("Comprovante copiado. Agora você pode colá-lo no WhatsApp.");
+        } else {
+            alert(texto);
+        }
+    } catch (erro) {
+        if (erro && erro.name !== "AbortError") {
+            alert("Não foi possível compartilhar o comprovante.");
+        }
+    }
+}
+
+function iniciarNovaVenda() {
+    ultimoComprovante = null;
+    document.getElementById("comprovanteVenda").classList.add("oculto");
+    document.getElementById("codigoProduto").focus();
+    document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
 }
 
 
