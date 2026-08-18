@@ -525,6 +525,50 @@ Sistema de vendas
         ⬅️ Voltar para a venda
     </button>
 
+    <div id="formPagamentoFiado" class="fiado-box oculto">
+
+        <h3>💵 Registrar pagamento</h3>
+
+        <div class="campo">
+            <label>Saldo atual</label>
+            <input id="saldoPagamentoFiado" type="text" readonly>
+        </div>
+
+        <div class="campo">
+            <label for="valorRecebimentoFiado">Valor recebido</label>
+            <input
+                id="valorRecebimentoFiado"
+                type="number"
+                step="0.01"
+                min="0.01"
+                inputmode="decimal"
+                placeholder="0,00">
+        </div>
+
+        <div class="campo">
+            <label for="formaRecebimentoFiado">Forma de pagamento</label>
+            <select id="formaRecebimentoFiado">
+                <option value="">Selecione</option>
+                <option value="DINHEIRO">DINHEIRO</option>
+                <option value="PIX">PIX</option>
+                <option value="REDE">REDE</option>
+                <option value="PROPIG">PROPIG</option>
+            </select>
+        </div>
+
+        <button
+            id="botaoConfirmarRecebimentoFiado"
+            class="botao-adicionar"
+            onclick="confirmarPagamentoFiado()">
+            ✅ Confirmar pagamento
+        </button>
+
+        <button class="botao-voltar" onclick="cancelarPagamentoFiado()">
+            Cancelar
+        </button>
+
+    </div>
+
     <div id="mensagemFiados" class="info" style="margin-top:15px; padding:15px;">
         Consultando valores em aberto...
     </div>
@@ -1058,6 +1102,8 @@ let produtoPendente = null;
 let usuarioAtual = null;
 
 let pagamentos = [];
+
+let pagamentoFiadoAtual = null;
 
 
 /* =========================================
@@ -2403,6 +2449,7 @@ function abrirFiados() {
 }
 
 function fecharFiados() {
+    cancelarPagamentoFiado();
     document.getElementById("areaFiados").classList.add("oculto");
     document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
 }
@@ -2530,27 +2577,47 @@ function exibirFiados(resultado) {
 }
 
 function pagarFiado(idFiado, saldo) {
-    const informado = prompt(
-        "Saldo atual: R$ " + formatarMoeda(saldo) +
-        "\n\nInforme o valor recebido:"
-    );
-    if (informado === null) return;
-    const valor = Number(String(informado).replace(",", "."));
-    if (!(valor > 0) || valor > Number(saldo) + 0.005) {
+    pagamentoFiadoAtual = {
+        idFiado: idFiado,
+        saldo: Number(saldo) || 0
+    };
+    document.getElementById("saldoPagamentoFiado").value =
+        "R$ " + formatarMoeda(pagamentoFiadoAtual.saldo);
+    document.getElementById("valorRecebimentoFiado").value = "";
+    document.getElementById("formaRecebimentoFiado").value = "";
+    document.getElementById("formPagamentoFiado").classList.remove("oculto");
+    document.getElementById("formPagamentoFiado").scrollIntoView({ behavior: "smooth" });
+    document.getElementById("valorRecebimentoFiado").focus();
+}
+
+function cancelarPagamentoFiado() {
+    pagamentoFiadoAtual = null;
+    document.getElementById("formPagamentoFiado").classList.add("oculto");
+}
+
+function confirmarPagamentoFiado() {
+    if (!pagamentoFiadoAtual) {
+        alert("Selecione um FIADO para registrar o pagamento.");
+        return;
+    }
+
+    const valor = Number(document.getElementById("valorRecebimentoFiado").value);
+    const formaPagamento = document.getElementById("formaRecebimentoFiado").value;
+
+    if (!(valor > 0) || valor > pagamentoFiadoAtual.saldo + 0.005) {
         alert("Informe um valor válido, limitado ao saldo do FIADO.");
         return;
     }
 
-    const formaDigitada = prompt(
-        "Informe a forma de pagamento:\n\n" +
-        "DINHEIRO, PIX, REDE ou PROPIG"
-    );
-    if (formaDigitada === null) return;
-    const formaPagamento = String(formaDigitada).trim().toUpperCase();
-    if (["DINHEIRO", "PIX", "REDE", "PROPIG"].indexOf(formaPagamento) === -1) {
-        alert("Forma inválida. Digite DINHEIRO, PIX, REDE ou PROPIG.");
+    if (!formaPagamento) {
+        alert("Selecione a forma de pagamento.");
         return;
     }
+
+    const idFiado = pagamentoFiadoAtual.idFiado;
+    const botao = document.getElementById("botaoConfirmarRecebimentoFiado");
+    botao.disabled = true;
+    botao.textContent = "⏳ Registrando...";
 
     const callback = "receberPagamentoFiado_" + Date.now();
     const script = document.createElement("script");
@@ -2559,8 +2626,13 @@ function pagarFiado(idFiado, saldo) {
             alert(resultado && resultado.sucesso
                 ? "✅ Pagamento registrado com sucesso."
                 : "❌ " + (resultado && resultado.mensagem ? resultado.mensagem : "Erro ao registrar."));
-            if (resultado && resultado.sucesso) carregarFiados();
+            if (resultado && resultado.sucesso) {
+                cancelarPagamentoFiado();
+                carregarFiados();
+            }
         } finally {
+            botao.disabled = false;
+            botao.textContent = "✅ Confirmar pagamento";
             try { delete window[callback]; } catch (e) {}
             try { script.remove(); } catch (e) {}
         }
@@ -2572,6 +2644,13 @@ function pagarFiado(idFiado, saldo) {
         "&valor=" + encodeURIComponent(valor) +
         "&formaPagamento=" + encodeURIComponent(formaPagamento) +
         "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        botao.disabled = false;
+        botao.textContent = "✅ Confirmar pagamento";
+        alert("Não foi possível comunicar com o servidor.");
+        try { delete window[callback]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+    };
     document.body.appendChild(script);
 }
 
