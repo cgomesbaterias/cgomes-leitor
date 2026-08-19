@@ -10,6 +10,14 @@
 
 <title>CGomes Vendas</title>
 
+<meta name="theme-color" content="#d71920">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CGomes Vendas">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icone-cgomes.png">
+<link rel="apple-touch-icon" href="./icone-cgomes.png">
+
 <script src="https://unpkg.com/html5-qrcode"
         type="text/javascript">
 </script>
@@ -559,6 +567,10 @@ Sistema de vendas
 
 <button class="botao-relatorio" onclick="abrirManual()">
     ❓ Manual rápido
+</button>
+
+<button id="botaoInstalarApp" class="botao-adicionar" onclick="instalarAplicativo()">
+    📲 Instalar no celular
 </button>
 
 <div id="areaManual" class="area-relatorio oculto">
@@ -1300,6 +1312,41 @@ let ultimoRelatorioVendas = null;
 let ultimoComprovante = null;
 
 let clientesCadastro = [];
+
+let eventoInstalacaoApp = null;
+
+window.addEventListener("beforeinstallprompt", function(evento) {
+    evento.preventDefault();
+    eventoInstalacaoApp = evento;
+});
+
+window.addEventListener("appinstalled", function() {
+    eventoInstalacaoApp = null;
+    document.getElementById("botaoInstalarApp").classList.add("oculto");
+});
+
+async function instalarAplicativo() {
+    if (eventoInstalacaoApp) {
+        eventoInstalacaoApp.prompt();
+        await eventoInstalacaoApp.userChoice;
+        eventoInstalacaoApp = null;
+        return;
+    }
+
+    alert(
+        "Para criar o ícone:\n\n" +
+        "Android/Chrome: abra o menu ⋮ e escolha Adicionar à tela inicial ou Instalar aplicativo.\n\n" +
+        "iPhone/Safari: toque em Compartilhar e depois em Adicionar à Tela de Início."
+    );
+}
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+        navigator.serviceWorker.register("./sw.js").catch(function(erro) {
+            console.warn("Não foi possível registrar o modo de aplicativo.", erro);
+        });
+    });
+}
 
 let pagamentoFiadoAtual = null;
 

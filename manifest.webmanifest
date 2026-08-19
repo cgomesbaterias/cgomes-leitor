@@ -1,0 +1,19 @@
+{
+  "name": "CGomes Vendas Mobile",
+  "short_name": "CGomes Vendas",
+  "description": "Aplicativo de vendas da C Gomes Baterias",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#d71920",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "./icone-cgomes.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
