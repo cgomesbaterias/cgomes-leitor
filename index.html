@@ -460,6 +460,7 @@ input[readonly] {
 
 <div class="subtitulo">
 Sistema de vendas
+<br><small>Versão 1.0.0</small>
 </div>
 
 
@@ -555,6 +556,37 @@ Sistema de vendas
 <button id="botaoClientes" class="botao-relatorio oculto" onclick="abrirClientes()">
     👥 Clientes
 </button>
+
+<button class="botao-relatorio" onclick="abrirManual()">
+    ❓ Manual rápido
+</button>
+
+<div id="areaManual" class="area-relatorio oculto">
+    <h2>❓ Manual rápido — CGomes Vendas</h2>
+
+    <h3>1. Identificação</h3>
+    <p>O aparelho permanece vinculado ao usuário cadastrado na aba DISPOSITIVOS. Para trocar, a LOJA deve alterar ou remover o vínculo diretamente nessa aba.</p>
+
+    <h3>2. Registrar uma venda</h3>
+    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. Depois informe comissão ou frete, quando o perfil exigir, e avance para o pagamento.</p>
+
+    <h3>3. Pagamento</h3>
+    <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
+
+    <h3>4. Documento fiscal e comprovante</h3>
+    <p>Marque “Cliente deseja documento fiscal” somente quando necessário. Preencha ou busque o cliente e confira todos os dados. Depois da gravação, o comprovante não fiscal pode ser gerado, impresso ou compartilhado.</p>
+
+    <h3>5. Relatórios e Bling</h3>
+    <p>LOJA consulta todas as vendas; VENDEDOR e ENTREGADOR consultam somente as próprias. Escolha o período e use “Baixar planilha para o Bling”. Pagamentos mistos ficam descritos nas observações para ajuste manual.</p>
+
+    <h3>6. FIADO e clientes</h3>
+    <p>O perfil LOJA registra pagamentos e estornos de FIADO, pesquisa e edita clientes e consulta o histórico. Vendedores e entregadores visualizam apenas os registros autorizados.</p>
+
+    <h3>7. Em caso de erro</h3>
+    <p>Atualize a página, confira a internet e verifique se o aparelho está ativo. Se a gravação falhar, não repita imediatamente sem confirmar antes no relatório se a venda já foi registrada.</p>
+
+    <button class="botao-voltar" onclick="fecharManual()">⬅️ Fechar manual</button>
+</div>
 
 <div id="areaClientes" class="area-relatorio oculto">
     <h2>👥 Clientes</h2>
@@ -2619,6 +2651,16 @@ function abrirFiados() {
     document.getElementById("areaFiados").classList.remove("oculto");
     document.getElementById("areaFiados").scrollIntoView({ behavior: "smooth" });
     carregarFiados();
+}
+
+function abrirManual() {
+    document.getElementById("areaManual").classList.remove("oculto");
+    document.getElementById("areaManual").scrollIntoView({ behavior: "smooth" });
+}
+
+function fecharManual() {
+    document.getElementById("areaManual").classList.add("oculto");
+    document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
 }
 
 function abrirClientes() {
