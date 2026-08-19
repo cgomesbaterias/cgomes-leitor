@@ -581,6 +581,13 @@ Sistema de vendas
         <button class="botao-adicionar" onclick="salvarEdicaoCliente()">💾 Salvar alterações</button>
         <button class="botao-voltar" onclick="cancelarEdicaoCliente()">Cancelar</button>
     </div>
+
+    <div id="historicoCliente" class="fiado-box oculto">
+        <h3 id="tituloHistoricoCliente">📚 Histórico do cliente</h3>
+        <div id="resumoHistoricoCliente" class="grade-relatorio"></div>
+        <div id="conteudoHistoricoCliente" class="tabela-relatorio"></div>
+        <button class="botao-voltar" onclick="fecharHistoricoCliente()">Fechar histórico</button>
+    </div>
 </div>
 
 
@@ -2667,7 +2674,8 @@ function exibirClientesCadastro_() {
     clientesCadastro.forEach(function(c, indice) {
         html += "<tr><td>" + escaparHTML(c.nome) + "</td><td>" + escaparHTML(c.cpf) +
             "</td><td>" + escaparHTML(c.celular) + "</td><td>R$ " + formatarMoeda(c.saldoFiado) +
-            "</td><td><button class=\"botao-confirmar\" onclick=\"editarClienteCadastro(" + indice + ")\">Editar</button></td></tr>";
+            "</td><td><button class=\"botao-confirmar\" onclick=\"editarClienteCadastro(" + indice + ")\">Editar</button>" +
+            "<button class=\"botao-adicionar\" onclick=\"abrirHistoricoCliente(" + indice + ")\">Histórico</button></td></tr>";
     });
     lista.innerHTML = html + "</tbody></table>";
     lista.classList.remove("oculto");
@@ -2690,6 +2698,91 @@ function editarClienteCadastro(indice) {
 
 function cancelarEdicaoCliente() {
     document.getElementById("formEditarCliente").classList.add("oculto");
+}
+
+function abrirHistoricoCliente(indice) {
+    const cliente = clientesCadastro[indice];
+    if (!cliente) return;
+    const area = document.getElementById("historicoCliente");
+    document.getElementById("tituloHistoricoCliente").textContent = "📚 Histórico de " + cliente.nome;
+    document.getElementById("conteudoHistoricoCliente").innerHTML = "Consultando histórico...";
+    document.getElementById("resumoHistoricoCliente").innerHTML = "";
+    area.classList.remove("oculto");
+    area.scrollIntoView({ behavior: "smooth" });
+    const callback = "receberHistoricoCliente_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) {
+                document.getElementById("conteudoHistoricoCliente").innerHTML = escaparHTML(
+                    resultado && resultado.mensagem ? resultado.mensagem : "Não foi possível consultar o histórico."
+                );
+                return;
+            }
+            exibirHistoricoCliente_(resultado);
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT + "?acao=buscarHistoricoCliente&linha=" + encodeURIComponent(cliente.linha) +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) + "&callback=" + encodeURIComponent(callback);
+    document.body.appendChild(script);
+}
+
+function exibirHistoricoCliente_(resultado) {
+    const vendas = resultado.vendas || [];
+    const fiados = resultado.fiados || [];
+    const recebimentos = resultado.recebimentos || [];
+    const totalCompras = vendas.reduce(function(t, v) { return t + Number(v.total || 0); }, 0);
+    const saldoFiado = fiados.reduce(function(t, f) { return t + Number(f.saldo || 0); }, 0);
+    document.getElementById("resumoHistoricoCliente").innerHTML =
+        "<div class=\"cartao-relatorio\"><span>Compras</span><strong>" + vendas.length + "</strong></div>" +
+        "<div class=\"cartao-relatorio\"><span>Total comprado</span><strong>R$ " + formatarMoeda(totalCompras) + "</strong></div>" +
+        "<div class=\"cartao-relatorio\"><span>Saldo FIADO</span><strong>R$ " + formatarMoeda(saldoFiado) + "</strong></div>" +
+        "<div class=\"cartao-relatorio\"><span>Recebimentos</span><strong>" + recebimentos.length + "</strong></div>";
+
+    let html = "<h3>Compras</h3>";
+    if (!vendas.length) html += "<p>Nenhuma compra identificada.</p>";
+    else {
+        html += "<table><thead><tr><th>Data</th><th>Venda</th><th>Total</th><th>Pagamento</th><th>Usuário</th></tr></thead><tbody>";
+        vendas.forEach(function(v) {
+            const formas = (v.pagamentos || []).map(function(p) { return p[0] + ": R$ " + formatarMoeda(p[1]); }).join(" | ");
+            html += "<tr><td>" + escaparHTML(v.data) + "</td><td>" + escaparHTML(v.numero) +
+                "</td><td>R$ " + formatarMoeda(v.total) + "</td><td>" + escaparHTML(formas) +
+                "</td><td>" + escaparHTML(v.usuario) + "</td></tr>";
+        });
+        html += "</tbody></table>";
+    }
+
+    html += "<h3>FIADO</h3>";
+    if (!fiados.length) html += "<p>Nenhum FIADO identificado.</p>";
+    else {
+        html += "<table><thead><tr><th>Venda</th><th>Valor</th><th>Pago</th><th>Saldo</th><th>Vencimento</th><th>Situação</th></tr></thead><tbody>";
+        fiados.forEach(function(f) {
+            html += "<tr><td>" + escaparHTML(f.numeroVenda) + "</td><td>R$ " + formatarMoeda(f.valor) +
+                "</td><td>R$ " + formatarMoeda(f.pago) + "</td><td>R$ " + formatarMoeda(f.saldo) +
+                "</td><td>" + escaparHTML(f.vencimento) + "</td><td>" + escaparHTML(f.situacao) + "</td></tr>";
+        });
+        html += "</tbody></table>";
+    }
+
+    html += "<h3>Pagamentos de FIADO</h3>";
+    if (!recebimentos.length) html += "<p>Nenhum pagamento identificado.</p>";
+    else {
+        html += "<table><thead><tr><th>Data</th><th>Venda</th><th>Valor</th><th>Forma</th><th>Situação</th></tr></thead><tbody>";
+        recebimentos.forEach(function(r) {
+            html += "<tr><td>" + escaparHTML(r.data) + "</td><td>" + escaparHTML(r.numeroVenda) +
+                "</td><td>R$ " + formatarMoeda(r.valor) + "</td><td>" + escaparHTML(r.forma) +
+                "</td><td>" + escaparHTML(r.situacao) + "</td></tr>";
+        });
+        html += "</tbody></table>";
+    }
+    document.getElementById("conteudoHistoricoCliente").innerHTML = html;
+}
+
+function fecharHistoricoCliente() {
+    document.getElementById("historicoCliente").classList.add("oculto");
 }
 
 function salvarEdicaoCliente() {
