@@ -552,6 +552,37 @@ Sistema de vendas
 
 </button>
 
+<button id="botaoClientes" class="botao-relatorio oculto" onclick="abrirClientes()">
+    👥 Clientes
+</button>
+
+<div id="areaClientes" class="area-relatorio oculto">
+    <h2>👥 Clientes</h2>
+    <div class="campo"><label>Pesquisar por nome, CPF ou celular</label><input id="pesquisaClientes" type="text"></div>
+    <button class="botao-confirmar" onclick="carregarClientes()">🔍 Pesquisar clientes</button>
+    <button class="botao-voltar" onclick="fecharClientes()">⬅️ Voltar para a venda</button>
+    <div id="mensagemClientes" class="info" style="margin-top:15px; padding:15px;">Informe um dado para pesquisar ou deixe vazio para listar.</div>
+    <div id="listaClientes" class="tabela-relatorio oculto"></div>
+
+    <div id="formEditarCliente" class="fiado-box oculto">
+        <h3>✏️ Editar cliente</h3>
+        <input id="clienteLinha" type="hidden">
+        <div class="campo"><label>Nome</label><input id="clienteNome" type="text"></div>
+        <div class="campo"><label>CPF</label><input id="clienteCpf" type="text" inputmode="numeric" maxlength="11" oninput="formatarCpfFiscal(this)"></div>
+        <div class="campo"><label>CEP</label><input id="clienteCep" type="text" inputmode="numeric" maxlength="9"></div>
+        <div class="campo"><label>Logradouro</label><input id="clienteLogradouro" type="text"></div>
+        <div class="campo"><label>Número</label><input id="clienteNumero" type="text"></div>
+        <div class="campo"><label>Complemento</label><input id="clienteComplemento" type="text"></div>
+        <div class="campo"><label>Bairro</label><input id="clienteBairro" type="text"></div>
+        <div class="campo"><label>Cidade</label><input id="clienteCidade" type="text"></div>
+        <div class="campo"><label>UF</label><input id="clienteUf" type="text" maxlength="2"></div>
+        <div class="campo"><label>E-mail</label><input id="clienteEmail" type="email"></div>
+        <div class="campo"><label>Celular</label><input id="clienteCelular" type="tel" inputmode="numeric" maxlength="14" oninput="formatarCelularFiscal(this)"></div>
+        <button class="botao-adicionar" onclick="salvarEdicaoCliente()">💾 Salvar alterações</button>
+        <button class="botao-voltar" onclick="cancelarEdicaoCliente()">Cancelar</button>
+    </div>
+</div>
+
 
 <div id="areaRelatorio"
      class="area-relatorio oculto">
@@ -1229,6 +1260,8 @@ let ultimoRelatorioVendas = null;
 
 let ultimoComprovante = null;
 
+let clientesCadastro = [];
+
 let pagamentoFiadoAtual = null;
 
 
@@ -1449,6 +1482,7 @@ function receberDispositivo(resultado) {
     configurarComissaoFrete();
 
     configurarAcessoRelatorio();
+    document.getElementById("botaoClientes").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
 
 
     mostrarResultadoDispositivo(
@@ -2578,6 +2612,118 @@ function abrirFiados() {
     document.getElementById("areaFiados").classList.remove("oculto");
     document.getElementById("areaFiados").scrollIntoView({ behavior: "smooth" });
     carregarFiados();
+}
+
+function abrirClientes() {
+    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA") {
+        alert("Acesso permitido somente para o perfil LOJA.");
+        return;
+    }
+    document.getElementById("areaRelatorio").classList.add("oculto");
+    document.getElementById("areaFiados").classList.add("oculto");
+    document.getElementById("areaClientes").classList.remove("oculto");
+    document.getElementById("areaClientes").scrollIntoView({ behavior: "smooth" });
+    carregarClientes();
+}
+
+function fecharClientes() {
+    cancelarEdicaoCliente();
+    document.getElementById("areaClientes").classList.add("oculto");
+    document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
+}
+
+function carregarClientes() {
+    const termo = document.getElementById("pesquisaClientes").value.trim();
+    const mensagem = document.getElementById("mensagemClientes");
+    mensagem.textContent = "Consultando clientes...";
+    const callback = "receberClientesCadastro_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) {
+                mensagem.className = "erro";
+                mensagem.textContent = resultado && resultado.mensagem ? resultado.mensagem : "Não foi possível consultar.";
+                return;
+            }
+            clientesCadastro = resultado.clientes || [];
+            mensagem.className = clientesCadastro.length ? "sucesso" : "info";
+            mensagem.textContent = clientesCadastro.length + " cliente(s) encontrado(s).";
+            exibirClientesCadastro_();
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT + "?acao=buscarClientesCadastro&termo=" + encodeURIComponent(termo) +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) + "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() { mensagem.className = "erro"; mensagem.textContent = "Falha ao consultar clientes."; };
+    document.body.appendChild(script);
+}
+
+function exibirClientesCadastro_() {
+    const lista = document.getElementById("listaClientes");
+    if (!clientesCadastro.length) { lista.innerHTML = ""; lista.classList.add("oculto"); return; }
+    let html = "<table><thead><tr><th>Nome</th><th>CPF</th><th>Celular</th><th>Saldo FIADO</th><th>Ação</th></tr></thead><tbody>";
+    clientesCadastro.forEach(function(c, indice) {
+        html += "<tr><td>" + escaparHTML(c.nome) + "</td><td>" + escaparHTML(c.cpf) +
+            "</td><td>" + escaparHTML(c.celular) + "</td><td>R$ " + formatarMoeda(c.saldoFiado) +
+            "</td><td><button class=\"botao-confirmar\" onclick=\"editarClienteCadastro(" + indice + ")\">Editar</button></td></tr>";
+    });
+    lista.innerHTML = html + "</tbody></table>";
+    lista.classList.remove("oculto");
+}
+
+function editarClienteCadastro(indice) {
+    const c = clientesCadastro[indice];
+    if (!c) return;
+    const campos = {
+        clienteLinha: c.linha, clienteNome: c.nome, clienteCpf: c.cpf, clienteCep: c.cep,
+        clienteLogradouro: c.logradouro, clienteNumero: c.numero, clienteComplemento: c.complemento,
+        clienteBairro: c.bairro, clienteCidade: c.cidade, clienteUf: c.uf,
+        clienteEmail: c.email, clienteCelular: c.celular
+    };
+    Object.keys(campos).forEach(function(id) { document.getElementById(id).value = campos[id] || ""; });
+    formatarCelularFiscal(document.getElementById("clienteCelular"));
+    document.getElementById("formEditarCliente").classList.remove("oculto");
+    document.getElementById("formEditarCliente").scrollIntoView({ behavior: "smooth" });
+}
+
+function cancelarEdicaoCliente() {
+    document.getElementById("formEditarCliente").classList.add("oculto");
+}
+
+function salvarEdicaoCliente() {
+    const dados = {
+        linha: Number(document.getElementById("clienteLinha").value),
+        nome: document.getElementById("clienteNome").value.trim(),
+        cpf: document.getElementById("clienteCpf").value.replace(/\D/g, ""),
+        cep: document.getElementById("clienteCep").value.replace(/\D/g, ""),
+        logradouro: document.getElementById("clienteLogradouro").value.trim(),
+        numero: document.getElementById("clienteNumero").value.trim(),
+        complemento: document.getElementById("clienteComplemento").value.trim(),
+        bairro: document.getElementById("clienteBairro").value.trim(),
+        cidade: document.getElementById("clienteCidade").value.trim(),
+        uf: document.getElementById("clienteUf").value.trim().toUpperCase(),
+        email: document.getElementById("clienteEmail").value.trim(),
+        celular: document.getElementById("clienteCelular").value.replace(/\D/g, "")
+    };
+    if (!dados.nome) { alert("Informe o nome do cliente."); return; }
+    if (dados.cpf && dados.cpf.length !== 11) { alert("O CPF deve ter 11 números."); return; }
+    if (dados.celular && dados.celular.length !== 11) { alert("O celular deve ter DDD e 9 dígitos."); return; }
+    const callback = "receberAtualizacaoCliente_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            alert(resultado && resultado.mensagem ? resultado.mensagem : "Não foi possível atualizar.");
+            if (resultado && resultado.sucesso) { cancelarEdicaoCliente(); carregarClientes(); }
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT + "?acao=atualizarClienteCadastro&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&dados=" + encodeURIComponent(JSON.stringify(dados)) + "&callback=" + encodeURIComponent(callback);
+    document.body.appendChild(script);
 }
 
 function fecharFiados() {
