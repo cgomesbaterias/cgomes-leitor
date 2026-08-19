@@ -565,6 +565,26 @@ Sistema de vendas
     👥 Clientes
 </button>
 
+<button id="botaoVendaRetroativa" class="botao-relatorio oculto" onclick="alternarVendaRetroativa()">
+    🕒 Registrar venda esquecida
+</button>
+
+<div id="areaVendaRetroativa" class="fiado-box oculto">
+    <h3>🕒 Registrar venda esquecida</h3>
+    <p>Preencha a venda normalmente. Ela será atribuída ao responsável e à data selecionados abaixo.</p>
+    <div class="campo">
+        <label>Data e hora da venda</label>
+        <input id="dataHoraVendaRetroativa" type="datetime-local">
+    </div>
+    <div class="campo">
+        <label>Vendedor ou entregador responsável</label>
+        <select id="responsavelVendaRetroativa" onchange="selecionarResponsavelRetroativo()">
+            <option value="">Selecione...</option>
+        </select>
+    </div>
+    <button class="botao-voltar" onclick="cancelarVendaRetroativa()">Cancelar lançamento retroativo</button>
+</div>
+
 <button class="botao-relatorio" onclick="abrirManual()">
     ❓ Manual rápido
 </button>
@@ -580,7 +600,7 @@ Sistema de vendas
     <p>O aparelho permanece vinculado ao usuário cadastrado na aba DISPOSITIVOS. Para trocar, a LOJA deve alterar ou remover o vínculo diretamente nessa aba.</p>
 
     <h3>2. Registrar uma venda</h3>
-    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. Depois informe comissão ou frete, quando o perfil exigir, e avance para o pagamento.</p>
+    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode informar frete opcional, mas deve selecionar o entregador responsável; a LOJA nunca recebe comissão. VENDEDOR informa comissão; ENTREGADOR informa frete.</p>
 
     <h3>3. Pagamento</h3>
     <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
@@ -927,6 +947,13 @@ Sistema de vendas
             inputmode="decimal"
             oninput="calcularResumoVenda()">
 
+    </div>
+
+    <div id="areaEntregadorFrete" class="campo oculto">
+        <label>Entregador responsável (obrigatório quando houver frete)</label>
+        <select id="entregadorFrete">
+            <option value="">Selecione...</option>
+        </select>
     </div>
 
 
@@ -1304,6 +1331,9 @@ let carrinho = [];
 let produtoPendente = null;
 
 let usuarioAtual = null;
+let vendaRetroativaAtiva = false;
+let responsaveisRetroativos = [];
+let entregadoresFrete = [];
 
 let pagamentos = [];
 
@@ -1569,6 +1599,8 @@ function receberDispositivo(resultado) {
 
     configurarAcessoRelatorio();
     document.getElementById("botaoClientes").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
+    document.getElementById("botaoVendaRetroativa").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
+    if (usuarioAtual.perfil === "LOJA") carregarEntregadoresFrete();
 
 
     mostrarResultadoDispositivo(
@@ -1582,11 +1614,116 @@ function receberDispositivo(resultado) {
 }
 
 
+function alternarVendaRetroativa() {
+    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA") {
+        alert("Acesso permitido somente para o perfil LOJA.");
+        return;
+    }
+    vendaRetroativaAtiva = true;
+    document.getElementById("areaVendaRetroativa").classList.remove("oculto");
+    document.getElementById("botaoVendaRetroativa").textContent = "🕒 Venda esquecida ativada";
+    const campoData = document.getElementById("dataHoraVendaRetroativa");
+    if (!campoData.value) {
+        const agora = new Date();
+        const local = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000);
+        campoData.value = local.toISOString().slice(0, 16);
+    }
+    carregarResponsaveisRetroativos();
+}
+
+function cancelarVendaRetroativa() {
+    vendaRetroativaAtiva = false;
+    document.getElementById("areaVendaRetroativa").classList.add("oculto");
+    document.getElementById("responsavelVendaRetroativa").value = "";
+    document.getElementById("botaoVendaRetroativa").textContent = "🕒 Registrar venda esquecida";
+    configurarComissaoFrete();
+}
+
+function carregarResponsaveisRetroativos() {
+    const callback = "receberResponsaveisRetroativos_" + Date.now();
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) {
+                alert(resultado && resultado.mensagem ? resultado.mensagem : "Não foi possível carregar os responsáveis.");
+                return;
+            }
+            responsaveisRetroativos = resultado.responsaveis || [];
+            const select = document.getElementById("responsavelVendaRetroativa");
+            select.innerHTML = '<option value="">Selecione...</option>';
+            responsaveisRetroativos.forEach(function(item, indice) {
+                const opcao = document.createElement("option");
+                opcao.value = String(indice);
+                opcao.textContent = item.usuario + " — " + item.perfil;
+                select.appendChild(opcao);
+            });
+        } finally {
+            delete window[callback];
+        }
+    };
+    const script = document.createElement("script");
+    script.src = URL_APPS_SCRIPT + "?acao=buscarResponsaveisRetroativos&idAparelho=" +
+        encodeURIComponent(usuarioAtual.idAparelho) + "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        delete window[callback];
+        alert("Não foi possível carregar os responsáveis.");
+    };
+    document.body.appendChild(script);
+}
+
+function selecionarResponsavelRetroativo() {
+    const indice = document.getElementById("responsavelVendaRetroativa").value;
+    const responsavel = indice === "" ? null : responsaveisRetroativos[Number(indice)];
+    configurarComissaoFrete(responsavel ? responsavel.perfil : "LOJA");
+}
+
+function obterResponsavelRetroativo_() {
+    if (!vendaRetroativaAtiva) return null;
+    const indice = document.getElementById("responsavelVendaRetroativa").value;
+    return indice === "" ? null : responsaveisRetroativos[Number(indice)];
+}
+
+function obterPerfilVenda_() {
+    const responsavel = obterResponsavelRetroativo_();
+    return responsavel ? responsavel.perfil : (usuarioAtual ? usuarioAtual.perfil : "");
+}
+
+function carregarEntregadoresFrete() {
+    const callback = "receberEntregadoresFrete_" + Date.now();
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) return;
+            entregadoresFrete = resultado.entregadores || [];
+            const select = document.getElementById("entregadorFrete");
+            select.innerHTML = '<option value="">Selecione...</option>';
+            entregadoresFrete.forEach(function(item, indice) {
+                const opcao = document.createElement("option");
+                opcao.value = String(indice);
+                opcao.textContent = item.usuario;
+                select.appendChild(opcao);
+            });
+        } finally {
+            delete window[callback];
+        }
+    };
+    const script = document.createElement("script");
+    script.src = URL_APPS_SCRIPT + "?acao=buscarEntregadores&idAparelho=" +
+        encodeURIComponent(usuarioAtual.idAparelho) + "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() { delete window[callback]; };
+    document.body.appendChild(script);
+}
+
+function obterEntregadorFrete_() {
+    const indice = document.getElementById("entregadorFrete").value;
+    return indice === "" ? null : entregadoresFrete[Number(indice)];
+}
+
 /* =========================================
    COMISSÃO / FRETE
 ========================================= */
 
-function configurarComissaoFrete() {
+function configurarComissaoFrete(perfilForcado) {
+
+    const perfilVenda = perfilForcado || usuarioAtual.perfil;
 
 
     const area =
@@ -1630,9 +1767,11 @@ function configurarComissaoFrete() {
             "linhaLiquido"
         );
 
+    const areaEntregador = document.getElementById("areaEntregadorFrete");
+
 
     if (
-        usuarioAtual.perfil ===
+        perfilVenda ===
         "VENDEDOR"
     ) {
 
@@ -1659,12 +1798,13 @@ function configurarComissaoFrete() {
         linhaComissao.classList.remove("oculto");
 
         linhaLiquido.classList.remove("oculto");
+        areaEntregador.classList.add("oculto");
 
     }
 
 
     else if (
-        usuarioAtual.perfil ===
+        perfilVenda ===
         "ENTREGADOR"
     ) {
 
@@ -1690,6 +1830,20 @@ function configurarComissaoFrete() {
         linhaComissao.classList.add("oculto");
 
         linhaLiquido.classList.add("oculto");
+        areaEntregador.classList.add("oculto");
+
+    }
+
+    else if (perfilVenda === "LOJA") {
+
+        area.classList.remove("oculto");
+        titulo.textContent = "🚚 Frete da venda";
+        label.textContent = "Valor do frete (opcional)";
+        explicacao.textContent = "Informe somente quando houver frete. A LOJA nunca recebe comissão.";
+        linhaFrete.classList.remove("oculto");
+        linhaComissao.classList.add("oculto");
+        linhaLiquido.classList.add("oculto");
+        areaEntregador.classList.remove("oculto");
 
     }
 
@@ -1707,6 +1861,7 @@ function configurarComissaoFrete() {
         linhaComissao.classList.add("oculto");
 
         linhaLiquido.classList.add("oculto");
+        areaEntregador.classList.add("oculto");
 
     }
 
@@ -2412,11 +2567,9 @@ function obterTotalVenda() {
         ) || 0;
 
 
-    if (
-        usuarioAtual &&
-        usuarioAtual.perfil ===
-        "ENTREGADOR"
-    ) {
+    const perfilVenda = obterPerfilVenda_();
+
+    if (perfilVenda === "ENTREGADOR" || perfilVenda === "LOJA") {
 
         return totalProdutos + valor;
 
@@ -2465,6 +2618,8 @@ function calcularResumoVenda() {
                 .value
         ) || 0;
 
+    const perfilVenda = obterPerfilVenda_();
+
 
     document
         .getElementById(
@@ -2479,8 +2634,8 @@ function calcularResumoVenda() {
 
 
     if (
-        usuarioAtual.perfil ===
-        "ENTREGADOR"
+        perfilVenda === "ENTREGADOR" ||
+        perfilVenda === "LOJA"
     ) {
 
 
@@ -2513,7 +2668,7 @@ function calcularResumoVenda() {
 
 
     else if (
-        usuarioAtual.perfil ===
+        perfilVenda ===
         "VENDEDOR"
     ) {
 
@@ -2580,13 +2735,9 @@ function continuarVenda() {
     }
 
 
-    if (
-        usuarioAtual &&
-        (
-            usuarioAtual.perfil === "VENDEDOR" ||
-            usuarioAtual.perfil === "ENTREGADOR"
-        )
-    ) {
+    const perfilVenda = obterPerfilVenda_();
+
+    if (perfilVenda === "VENDEDOR" || perfilVenda === "ENTREGADOR") {
 
         const valorComissaoFrete =
             Number(
@@ -2596,7 +2747,7 @@ function continuarVenda() {
         if (!(valorComissaoFrete > 0)) {
 
             alert(
-                usuarioAtual.perfil === "VENDEDOR"
+                perfilVenda === "VENDEDOR"
                     ? "Informe o valor da comissão antes de continuar."
                     : "Informe o valor do frete antes de continuar."
             );
@@ -2609,6 +2760,15 @@ function continuarVenda() {
 
         }
 
+    }
+
+    if (perfilVenda === "LOJA") {
+        const freteLoja = Number(document.getElementById("valorComissaoFrete").value) || 0;
+        if (freteLoja > 0 && !obterEntregadorFrete_()) {
+            alert("Selecione o entregador responsável pelo frete antes de continuar.");
+            document.getElementById("entregadorFrete").focus();
+            return;
+        }
     }
 
 
@@ -3293,7 +3453,7 @@ function exibirRelatorio(resultado) {
     }
 
     let html = "<table><thead><tr>" +
-        "<th>Data/hora</th><th>Nº</th><th>Usuário</th><th>Perfil</th>" +
+        "<th>Data/hora</th><th>Nº</th><th>Usuário</th><th>Perfil</th><th>Entregador</th>" +
         "<th>Total</th><th>Comissão</th><th>Frete</th><th>Pagamentos</th>" +
         "</tr></thead><tbody>";
 
@@ -3313,6 +3473,7 @@ function exibirRelatorio(resultado) {
             "</td><td>" + escaparHTML(venda.numero) +
             "</td><td>" + escaparHTML(venda.usuario) +
             "</td><td>" + escaparHTML(venda.perfil) +
+            "</td><td>" + escaparHTML(venda.entregador || "") +
             "</td><td>R$ " + formatarMoeda(venda.totalVenda) +
             "</td><td>R$ " + formatarMoeda(venda.comissao) +
             "</td><td>R$ " + formatarMoeda(venda.frete) +
@@ -4306,6 +4467,18 @@ function finalizarVenda() {
         return;
     }
 
+    const responsavelRetroativo = obterResponsavelRetroativo_();
+    const dataHoraRetroativa = vendaRetroativaAtiva
+        ? document.getElementById("dataHoraVendaRetroativa").value
+        : "";
+
+    if (vendaRetroativaAtiva && (!responsavelRetroativo || !dataHoraRetroativa)) {
+        alert("Selecione a data, a hora e o responsável pela venda esquecida.");
+        return;
+    }
+
+    const usuarioVenda = responsavelRetroativo || usuarioAtual;
+
 
     const clienteFiscal = obterDadosClienteFiscal_();
     if (clienteFiscal === false) return;
@@ -4351,7 +4524,7 @@ function finalizarVenda() {
     */
 
     if (
-        usuarioAtual.perfil ===
+        usuarioVenda.perfil ===
         "VENDEDOR"
     ) {
 
@@ -4372,7 +4545,7 @@ function finalizarVenda() {
     */
 
     else if (
-        usuarioAtual.perfil ===
+        usuarioVenda.perfil ===
         "ENTREGADOR"
     ) {
 
@@ -4381,6 +4554,23 @@ function finalizarVenda() {
 
         comissao = 0;
 
+    }
+
+    else if (usuarioVenda.perfil === "LOJA") {
+
+        frete = valorComissaoFrete;
+        comissao = 0;
+
+    }
+
+    let entregadorFreteSelecionado = null;
+    if (usuarioVenda.perfil === "LOJA" && frete > 0) {
+        entregadorFreteSelecionado = obterEntregadorFrete_();
+        if (!entregadorFreteSelecionado) {
+            alert("Selecione o entregador responsável pelo frete.");
+            document.getElementById("entregadorFrete").focus();
+            return;
+        }
     }
 
 
@@ -4507,16 +4697,28 @@ else if (
         clienteFiscal:
             clienteFiscal,
 
+        entregadorFrete: entregadorFreteSelecionado ? {
+            idAparelho: entregadorFreteSelecionado.idAparelho,
+            usuario: entregadorFreteSelecionado.usuario
+        } : null,
+
+        registroRetroativo: vendaRetroativaAtiva ? {
+            ativo: true,
+            idAparelhoLoja: usuarioAtual.idAparelho,
+            idAparelhoResponsavel: responsavelRetroativo.idAparelho,
+            dataHora: dataHoraRetroativa
+        } : null,
+
         usuarioAtual: {
 
             idAparelho:
-                usuarioAtual.idAparelho,
+                usuarioVenda.idAparelho,
 
             usuario:
-                usuarioAtual.usuario,
+                usuarioVenda.usuario,
 
             perfil:
-                usuarioAtual.perfil
+                usuarioVenda.perfil
 
         },
 
@@ -4662,6 +4864,7 @@ itens:
                 ) {
 
                     exibirComprovante(resultado, dadosVenda);
+                    if (vendaRetroativaAtiva) cancelarVendaRetroativa();
 
                     /*
                        Venda gravada com sucesso.
@@ -4693,6 +4896,8 @@ itens:
                     carrinho = [];
 
                     pagamentos = [];
+
+                    document.getElementById("entregadorFrete").value = "";
 
                     produtoPendente = null;
 
