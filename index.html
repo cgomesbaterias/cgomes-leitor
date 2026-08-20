@@ -26,6 +26,10 @@
         type="text/javascript">
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
+        type="text/javascript">
+</script>
+
 <style>
 
 body {
@@ -5432,19 +5436,33 @@ function textoComprovante_() {
         "Venda: " + ultimoComprovante.numero,
         "Data: " + ultimoComprovante.data,
         "Cliente: " + ultimoComprovante.cliente,
-        "Atendimento: " + ultimoComprovante.usuario,
+        "Atendimento: " + ultimoComprovante.usuario +
+            (ultimoComprovante.perfil ? " (" + ultimoComprovante.perfil + ")" : ""),
         "",
         "PRODUTOS"
     ];
 
     ultimoComprovante.itens.forEach(function(item) {
         linhas.push(
-            item.produto + " | " + item.quantidade + " x R$ " +
-            formatarMoeda(item.preco) + " = R$ " + formatarMoeda(item.subtotal)
+            item.produto,
+            "Cód.: " + (item.codigo || "-") + " | Qtd.: " + item.quantidade +
+            " | Unit.: R$ " + formatarMoeda(item.preco),
+            "Subtotal: R$ " + formatarMoeda(item.subtotal)
         );
     });
 
-    linhas.push("", "Total: R$ " + formatarMoeda(ultimoComprovante.totalVenda), "", "PAGAMENTO");
+    linhas.push(
+        "",
+        "Produtos: R$ " + formatarMoeda(ultimoComprovante.totalProdutos)
+    );
+    if (Number(ultimoComprovante.frete) > 0) {
+        linhas.push("Frete: R$ " + formatarMoeda(ultimoComprovante.frete));
+    }
+    linhas.push(
+        "Total da venda: R$ " + formatarMoeda(ultimoComprovante.totalVenda),
+        "",
+        "PAGAMENTO"
+    );
     ultimoComprovante.pagamentos.forEach(function(item) {
         linhas.push(item.forma + ": R$ " + formatarMoeda(item.valor));
     });
@@ -5487,7 +5505,7 @@ function quebrarLinhaCanvas_(contexto, texto, larguraMaxima) {
     return linhas.length ? linhas : [""];
 }
 
-async function criarImagemComprovante58mm_() {
+async function criarImagemComprovanteTexto58mm_() {
     const largura = 384;
     const margem = 18;
     const larguraUtil = largura - (margem * 2);
@@ -5529,7 +5547,9 @@ async function criarImagemComprovante58mm_() {
             linha === "Obrigado pela preferência!";
         const destaque = linha === "C GOMES BATERIAS" ||
             linha.indexOf("COMPROVANTE DE VENDA") === 0 ||
-            linha.indexOf("Total:") === 0 || linha === "PRODUTOS" || linha === "PAGAMENTO";
+            linha.indexOf("Total da venda:") === 0 ||
+            linha.indexOf("Frete:") === 0 ||
+            linha === "PRODUTOS" || linha === "PAGAMENTO";
         contexto.font = (destaque ? "bold " : "") + "18px Arial";
         contexto.textBaseline = "top";
         contexto.textAlign = centralizada ? "center" : "left";
@@ -5543,6 +5563,63 @@ async function criarImagemComprovante58mm_() {
             else reject(new Error("Não foi possível gerar a imagem do comprovante."));
         }, "image/png", 1);
     });
+}
+
+async function criarImagemComprovante58mm_() {
+    if (typeof html2canvas === "undefined") {
+        return criarImagemComprovanteTexto58mm_();
+    }
+
+    const comprovanteOriginal = document.getElementById("comprovanteVenda");
+    const copia = comprovanteOriginal.cloneNode(true);
+    copia.id = "comprovanteVendaCaptura58mm";
+    copia.classList.remove("oculto");
+    copia.style.position = "fixed";
+    copia.style.left = "-10000px";
+    copia.style.top = "0";
+    copia.style.display = "block";
+    copia.style.visibility = "visible";
+    copia.style.width = "384px";
+    copia.style.maxWidth = "384px";
+    copia.style.margin = "0";
+    copia.style.padding = "18px";
+    copia.style.boxSizing = "border-box";
+    copia.style.background = "#ffffff";
+    copia.style.color = "#000000";
+
+    const acoes = copia.querySelector(".comprovante-acoes");
+    if (acoes) acoes.remove();
+    document.body.appendChild(copia);
+
+    try {
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        const imagens = Array.from(copia.querySelectorAll("img"));
+        await Promise.all(imagens.map(function(imagem) {
+            if (imagem.complete) return Promise.resolve();
+            return new Promise(function(resolve) {
+                imagem.onload = resolve;
+                imagem.onerror = resolve;
+            });
+        }));
+
+        const canvas = await html2canvas(copia, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            width: 384,
+            windowWidth: 420
+        });
+
+        return await new Promise(function(resolve, reject) {
+            canvas.toBlob(function(blob) {
+                if (blob) resolve(blob);
+                else reject(new Error("Não foi possível gerar a imagem do comprovante."));
+            }, "image/png", 1);
+        });
+    } finally {
+        copia.remove();
+    }
 }
 
 async function imprimirComprovante() {
