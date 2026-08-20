@@ -5561,11 +5561,7 @@ async function imprimirComprovante() {
         });
 
         if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [arquivo] }))) {
-            await navigator.share({
-                title: "Comprovante C Gomes",
-                text: "Comprovante de venda - C Gomes Baterias",
-                files: [arquivo]
-            });
+            await navigator.share({ files: [arquivo] });
             return;
         }
 
