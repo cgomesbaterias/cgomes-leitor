@@ -3515,9 +3515,10 @@ function exibirRelatorio(resultado) {
     let html = "<table><thead><tr>" +
         "<th>Data/hora</th><th>Nº</th><th>Usuário</th><th>Perfil</th><th>Entregador</th>" +
         "<th>Total</th><th>Comissão</th><th>Frete</th><th>Pagamentos</th>" +
+        "<th>Comprovante</th>" +
         "</tr></thead><tbody>";
 
-    vendas.forEach(function(venda) {
+    vendas.forEach(function(venda, indiceVenda) {
         const formas = [];
         [
             ["PROPIG", venda.propig], ["REDE", venda.rede],
@@ -3537,11 +3538,64 @@ function exibirRelatorio(resultado) {
             "</td><td>R$ " + formatarMoeda(venda.totalVenda) +
             "</td><td>R$ " + formatarMoeda(venda.comissao) +
             "</td><td>R$ " + formatarMoeda(venda.frete) +
-            "</td><td>" + escaparHTML(formas.join(" | ")) + "</td></tr>";
+            "</td><td>" + escaparHTML(formas.join(" | ")) +
+            "</td><td><button type=\"button\" class=\"botao-confirmar\" " +
+            "onclick=\"abrirComprovanteRelatorio_(" + indiceVenda + ")\">" +
+            "🧾 Comprovante</button></td></tr>";
     });
 
     lista.innerHTML = html + "</tbody></table>";
     lista.classList.remove("oculto");
+}
+
+function abrirComprovanteRelatorio_(indiceVenda) {
+    const vendas = ultimoRelatorioVendas && ultimoRelatorioVendas.vendas
+        ? ultimoRelatorioVendas.vendas
+        : [];
+    const venda = vendas[indiceVenda];
+
+    if (!venda) {
+        alert("Não foi possível localizar essa venda no relatório.");
+        return;
+    }
+
+    const pagamentosVenda = {
+        PROPIG: Number(venda.propig) || 0,
+        REDE: Number(venda.rede) || 0,
+        PIX: Number(venda.pix) || 0,
+        DINHEIRO: Number(venda.dinheiro) || 0,
+        PERMUTA: Number(venda.permuta) || 0,
+        FIADO: Number(venda.fiado) || 0
+    };
+    const itens = venda.itens || [];
+    const totalProdutos = itens.reduce(function(total, item) {
+        return total + (Number(item.subtotal) ||
+            ((Number(item.quantidade) || 0) * (Number(item.preco) || 0)));
+    }, 0);
+
+    exibirComprovante(
+        {
+            numeroVenda: venda.numero || "",
+            data: venda.dataHora || "",
+            totalVenda: Number(venda.totalVenda) || 0
+        },
+        {
+            clienteFiscal: venda.clienteFiscal || null,
+            clienteFiado: venda.clienteFiado || "",
+            clientePermuta: venda.clientePermuta || "",
+            usuarioAtual: {
+                usuario: venda.usuario || "",
+                perfil: venda.perfil || ""
+            },
+            itens: itens,
+            pagamentos: pagamentosVenda,
+            totalProdutos: totalProdutos ||
+                Math.max(0, (Number(venda.totalVenda) || 0) - (Number(venda.frete) || 0)),
+            frete: Number(venda.frete) || 0
+        }
+    );
+
+    abrirComprovante();
 }
 
 function baixarPlanilhaBling() {
