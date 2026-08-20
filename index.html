@@ -205,6 +205,11 @@ button {
 }
 
 @media print {
+    @page {
+        size: 58mm auto;
+        margin: 0;
+    }
+
     body * {
         visibility: hidden;
     }
@@ -218,10 +223,40 @@ button {
         position: absolute;
         left: 0;
         top: 0;
-        width: 100%;
+        width: 58mm;
         margin: 0;
+        padding: 2mm;
         border: none;
         box-sizing: border-box;
+        border-radius: 0;
+        font-size: 10px;
+        color: #000;
+        background: #fff;
+    }
+
+    #comprovanteVenda h2 {
+        margin: 2mm 0 1mm;
+        font-size: 15px;
+    }
+
+    #comprovanteVenda p {
+        margin: 2mm 0;
+    }
+
+    #comprovanteVenda table {
+        table-layout: fixed;
+        font-size: 9px;
+    }
+
+    #comprovanteVenda th,
+    #comprovanteVenda td {
+        padding: 1.2mm 0.5mm;
+        overflow-wrap: anywhere;
+    }
+
+    #comprovanteVenda th:first-child,
+    #comprovanteVenda td:first-child {
+        width: 42%;
     }
 
     .comprovante-acoes {
@@ -1472,25 +1507,50 @@ function consultarDispositivo(id) {
     );
 
 
-    const url =
+    const nomeCallback = "receberDispositivo_" + Date.now();
+    const script = document.createElement("script");
+    let concluido = false;
 
+    function limparConsulta() {
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[nomeCallback]; } catch (e) { window[nomeCallback] = undefined; }
+    }
+
+    const limiteEspera = setTimeout(function() {
+        if (concluido) return;
+        concluido = true;
+        limparConsulta();
+        mostrarResultadoDispositivo(
+            false,
+            "Não foi possível verificar o aparelho. Confira a internet e atualize a página."
+        );
+    }, 15000);
+
+    window[nomeCallback] = function(resultado) {
+        if (concluido) return;
+        concluido = true;
+        clearTimeout(limiteEspera);
+        limparConsulta();
+        receberDispositivo(resultado);
+    };
+
+    script.onerror = function() {
+        if (concluido) return;
+        concluido = true;
+        clearTimeout(limiteEspera);
+        limparConsulta();
+        mostrarResultadoDispositivo(
+            false,
+            "Falha ao acessar o servidor. Atualize a página e tente novamente."
+        );
+    };
+
+    script.src =
         URL_APPS_SCRIPT +
-
         "?acao=buscarDispositivo" +
-
-        "&idAparelho=" +
-
-        encodeURIComponent(id) +
-
-        "&callback=receberDispositivo";
-
-
-    const script =
-        document.createElement("script");
-
-
-    script.src = url;
-
+        "&idAparelho=" + encodeURIComponent(id) +
+        "&callback=" + encodeURIComponent(nomeCallback) +
+        "&_=" + Date.now();
 
     document.body.appendChild(script);
 
@@ -5338,9 +5398,132 @@ function textoComprovante_() {
     return linhas.join("\n");
 }
 
-function imprimirComprovante() {
+function ehIOS_() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function carregarImagem_(origem) {
+    return new Promise(function(resolve) {
+        if (!origem) {
+            resolve(null);
+            return;
+        }
+        const imagem = new Image();
+        imagem.onload = function() { resolve(imagem); };
+        imagem.onerror = function() { resolve(null); };
+        imagem.src = origem;
+    });
+}
+
+function quebrarLinhaCanvas_(contexto, texto, larguraMaxima) {
+    const palavras = String(texto || "").split(/\s+/);
+    const linhas = [];
+    let linha = "";
+    palavras.forEach(function(palavra) {
+        const teste = linha ? linha + " " + palavra : palavra;
+        if (linha && contexto.measureText(teste).width > larguraMaxima) {
+            linhas.push(linha);
+            linha = palavra;
+        } else {
+            linha = teste;
+        }
+    });
+    if (linha) linhas.push(linha);
+    return linhas.length ? linhas : [""];
+}
+
+async function criarImagemComprovante58mm_() {
+    const largura = 384;
+    const margem = 18;
+    const larguraUtil = largura - (margem * 2);
+    const medidor = document.createElement("canvas").getContext("2d");
+    medidor.font = "18px Arial";
+    const linhasOriginais = textoComprovante_().split("\n");
+    const linhas = [];
+
+    linhasOriginais.forEach(function(linha) {
+        quebrarLinhaCanvas_(medidor, linha, larguraUtil).forEach(function(parte) {
+            linhas.push(parte);
+        });
+    });
+
+    const logo = await carregarImagem_(document.getElementById("logoLoja").src);
+    const alturaLogo = logo ? 105 : 0;
+    const alturaLinha = 25;
+    const altura = margem + alturaLogo + (logo ? 10 : 0) +
+        (linhas.length * alturaLinha) + 35;
+    const canvas = document.createElement("canvas");
+    canvas.width = largura;
+    canvas.height = altura;
+    const contexto = canvas.getContext("2d");
+    contexto.fillStyle = "#fff";
+    contexto.fillRect(0, 0, largura, altura);
+    contexto.fillStyle = "#000";
+
+    let y = margem;
+    if (logo) {
+        const escala = Math.min(220 / logo.width, alturaLogo / logo.height);
+        const w = logo.width * escala;
+        const h = logo.height * escala;
+        contexto.drawImage(logo, (largura - w) / 2, y, w, h);
+        y += alturaLogo + 10;
+    }
+
+    linhas.forEach(function(linha, indice) {
+        const centralizada = indice < 6 || linha === "PRODUTOS" || linha === "PAGAMENTO" ||
+            linha === "Obrigado pela preferência!";
+        const destaque = linha === "C GOMES BATERIAS" ||
+            linha.indexOf("COMPROVANTE DE VENDA") === 0 ||
+            linha.indexOf("Total:") === 0 || linha === "PRODUTOS" || linha === "PAGAMENTO";
+        contexto.font = (destaque ? "bold " : "") + "18px Arial";
+        contexto.textBaseline = "top";
+        contexto.textAlign = centralizada ? "center" : "left";
+        contexto.fillText(linha, centralizada ? largura / 2 : margem, y);
+        y += alturaLinha;
+    });
+
+    return new Promise(function(resolve, reject) {
+        canvas.toBlob(function(blob) {
+            if (blob) resolve(blob);
+            else reject(new Error("Não foi possível gerar a imagem do comprovante."));
+        }, "image/png", 1);
+    });
+}
+
+async function imprimirComprovante() {
     if (!ultimoComprovante) return;
-    window.print();
+
+    if (!ehIOS_()) {
+        window.print();
+        return;
+    }
+
+    try {
+        const imagem = await criarImagemComprovante58mm_();
+        const nomeSeguro = String(ultimoComprovante.numero || "venda").replace(/[^a-zA-Z0-9_-]/g, "-");
+        const arquivo = new File([imagem], "comprovante-" + nomeSeguro + "-58mm.png", {
+            type: "image/png"
+        });
+
+        if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [arquivo] }))) {
+            await navigator.share({
+                title: "Comprovante C Gomes",
+                text: "Comprovante de venda - C Gomes Baterias",
+                files: [arquivo]
+            });
+            return;
+        }
+
+        const url = URL.createObjectURL(imagem);
+        window.open(url, "_blank");
+        setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+        alert("A imagem do comprovante foi aberta. Toque em Compartilhar e escolha BR RawPrinter.");
+    } catch (erro) {
+        if (!erro || erro.name !== "AbortError") {
+            alert("Não foi possível preparar a impressão. Tente novamente.");
+        }
+    }
 }
 
 async function compartilharComprovante() {
