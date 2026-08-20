@@ -642,7 +642,7 @@ Sistema de vendas
     <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode informar frete opcional, mas deve selecionar o entregador responsável; a LOJA nunca recebe comissão. VENDEDOR informa comissão; ENTREGADOR informa frete.</p>
 
     <h3>3. Pagamento</h3>
-    <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
+    <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, BOLETO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
 
     <h3>4. Documento fiscal e comprovante</h3>
     <p>Marque “Cliente deseja documento fiscal” somente quando necessário. Preencha ou busque o cliente e confira todos os dados. Depois da gravação, o comprovante não fiscal pode ser gerado, impresso ou compartilhado.</p>
@@ -1213,6 +1213,10 @@ Sistema de vendas
 
                 <option value="DINHEIRO">
                     DINHEIRO
+                </option>
+
+                <option value="BOLETO">
+                    BOLETO
                 </option>
 
                 <option value="PERMUTA">
@@ -3499,6 +3503,7 @@ function exibirRelatorio(resultado) {
         ["REDE", "R$ " + formatarMoeda(totais.rede)],
         ["PIX", "R$ " + formatarMoeda(totais.pix)],
         ["DINHEIRO", "R$ " + formatarMoeda(totais.dinheiro)],
+        ["BOLETO", "R$ " + formatarMoeda(totais.boleto)],
         ["PERMUTA", "R$ " + formatarMoeda(totais.permuta)],
         ["FIADO", "R$ " + formatarMoeda(totais.fiado)]
     ];
@@ -3527,6 +3532,7 @@ function exibirRelatorio(resultado) {
         [
             ["PROPIG", venda.propig], ["REDE", venda.rede],
             ["PIX", venda.pix], ["DINHEIRO", venda.dinheiro],
+            ["BOLETO", venda.boleto],
             ["PERMUTA", venda.permuta], ["FIADO", venda.fiado]
         ].forEach(function(forma) {
             if (Number(forma[1]) > 0) {
@@ -3568,6 +3574,7 @@ function abrirComprovanteRelatorio_(indiceVenda) {
         REDE: Number(venda.rede) || 0,
         PIX: Number(venda.pix) || 0,
         DINHEIRO: Number(venda.dinheiro) || 0,
+        BOLETO: Number(venda.boleto) || 0,
         PERMUTA: Number(venda.permuta) || 0,
         FIADO: Number(venda.fiado) || 0
     };
@@ -3719,6 +3726,7 @@ function formaPagamentoBling_(venda) {
         ["REDE", venda.rede],
         ["PIX", venda.pix],
         ["DINHEIRO", venda.dinheiro],
+        ["BOLETO", venda.boleto],
         ["FIADO", venda.fiado],
         ["PERMUTA", venda.permuta]
     ].forEach(function(item) {
@@ -3730,7 +3738,7 @@ function formaPagamentoBling_(venda) {
 function quantidadeFormasPagamentoBling_(venda) {
     return [
         venda.propig, venda.rede, venda.pix,
-        venda.dinheiro, venda.permuta, venda.fiado
+        venda.dinheiro, venda.boleto, venda.permuta, venda.fiado
     ].filter(function(valor) {
         return Number(valor) > 0;
     }).length;
@@ -3741,7 +3749,8 @@ function observacoesBling_(venda) {
     const formas = [];
     [
         ["PROPIG", venda.propig], ["REDE", venda.rede], ["PIX", venda.pix],
-        ["DINHEIRO", venda.dinheiro], ["PERMUTA", venda.permuta], ["FIADO", venda.fiado]
+        ["DINHEIRO", venda.dinheiro], ["BOLETO", venda.boleto],
+        ["PERMUTA", venda.permuta], ["FIADO", venda.fiado]
     ].forEach(function(item) {
         if (Number(item[1]) > 0) formas.push(item[0] + ": R$ " + formatarMoeda(item[1]));
     });
@@ -4706,6 +4715,8 @@ function finalizarVenda() {
 
     let dinheiro = 0;
 
+    let boleto = 0;
+
     let permuta = 0;
 
     let fiado = 0;
@@ -4768,6 +4779,16 @@ function finalizarVenda() {
             ) {
 
                 dinheiro += valor;
+
+            }
+
+
+            else if (
+                pagamento.forma ===
+                "BOLETO"
+            ) {
+
+                boleto += valor;
 
             }
 
@@ -4870,6 +4891,9 @@ else if (
 
             DINHEIRO:
                 dinheiro,
+
+            BOLETO:
+                boleto,
 
             PERMUTA:
                 permuta,
