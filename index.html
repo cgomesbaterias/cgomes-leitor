@@ -5645,7 +5645,8 @@ async function criarImagemComprovante58mm_() {
 async function imprimirComprovante() {
     if (!ultimoComprovante) return;
 
-    if (!ehIOS_()) {
+    const celular = ehIOS_() || /Android/i.test(navigator.userAgent);
+    if (!celular) {
         window.print();
         return;
     }
@@ -5665,7 +5666,7 @@ async function imprimirComprovante() {
         const url = URL.createObjectURL(imagem);
         window.open(url, "_blank");
         setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
-        alert("A imagem do comprovante foi aberta. Toque em Compartilhar e escolha BR RawPrinter.");
+        alert("A imagem do comprovante foi aberta. Toque em Compartilhar e escolha o aplicativo da impressora.");
     } catch (erro) {
         if (!erro || erro.name !== "AbortError") {
             alert("Não foi possível preparar a impressão. Tente novamente.");
