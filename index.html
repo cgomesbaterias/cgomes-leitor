@@ -639,7 +639,7 @@ Sistema de vendas
     <p>O aparelho permanece vinculado ao usuário cadastrado na aba DISPOSITIVOS. Para trocar, a LOJA deve alterar ou remover o vínculo diretamente nessa aba.</p>
 
     <h3>2. Registrar uma venda</h3>
-    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode informar frete opcional, mas deve selecionar o entregador responsável; a LOJA nunca recebe comissão. VENDEDOR informa comissão; ENTREGADOR informa frete.</p>
+    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode informar frete opcional, mas deve selecionar o entregador responsável; a LOJA nunca recebe comissão. VENDEDOR informa comissão. Para ENTREGADOR, o frete é opcional: deixe zerado nas vendas de balcão.</p>
 
     <h3>3. Pagamento</h3>
     <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, BOLETO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
@@ -1884,13 +1884,13 @@ function configurarComissaoFrete(perfilForcado) {
 
 
         label.textContent =
-            "Valor do frete";
+            "Valor do frete (opcional)";
 
 
         explicacao.textContent =
 
-            "O frete é acrescentado " +
-            "ao valor dos produtos e cobrado do cliente.";
+            "Informe o frete somente quando houver entrega. " +
+            "Para venda de balcão, mantenha R$ 0,00.";
 
 
         linhaFrete.classList.remove("oculto");
@@ -2805,7 +2805,7 @@ function continuarVenda() {
 
     const perfilVenda = obterPerfilVenda_();
 
-    if (perfilVenda === "VENDEDOR" || perfilVenda === "ENTREGADOR") {
+    if (perfilVenda === "VENDEDOR") {
 
         const valorComissaoFrete =
             Number(
@@ -2814,11 +2814,7 @@ function continuarVenda() {
 
         if (!(valorComissaoFrete > 0)) {
 
-            alert(
-                perfilVenda === "VENDEDOR"
-                    ? "Informe o valor da comissão antes de continuar."
-                    : "Informe o valor do frete antes de continuar."
-            );
+            alert("Informe o valor da comissão antes de continuar.");
 
             document
                 .getElementById("valorComissaoFrete")
