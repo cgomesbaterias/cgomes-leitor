@@ -18,7 +18,7 @@
 <link rel="icon" type="image/png" href="./icone-cgomes.png">
 <link rel="apple-touch-icon" href="./icone-cgomes.png">
 
-<script src="https://unpkg.com/html5-qrcode"
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
         type="text/javascript">
 </script>
 
@@ -2046,24 +2046,17 @@ function iniciarLeitor() {
 
     const configuracao = {
 
-        // Mais quadros e uma faixa larga/baixa favorecem o Code 128,
-        // principalmente quando as barras estão pouco definidas.
-        fps: 20,
+        // Uma taxa moderada deixa mais tempo para decodificar barras pouco nítidas.
+        fps: 12,
 
         qrbox: function(largura, altura) {
             return {
-                width: Math.max(240, Math.min(Math.floor(largura * 0.92), 620)),
-                height: Math.max(110, Math.min(Math.floor(altura * 0.38), 230))
+                width: Math.max(240, Math.min(Math.floor(largura * 0.86), 560)),
+                height: Math.max(100, Math.min(Math.floor(altura * 0.34), 190))
             };
         },
 
-        aspectRatio: 1.777778,
-
         disableFlip: true,
-
-        experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-        },
 
         formatsToSupport: [
 
@@ -2076,13 +2069,9 @@ function iniciarLeitor() {
 
     leitor.start(
 
-        {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, min: 15 },
-            focusMode: { ideal: "continuous" }
-        },
+        // Somente esta condição é usada para abrir a câmera. Exigências de
+        // resolução/foco aqui impediam alguns Androids e iPhones de iniciar.
+        { facingMode: "environment" },
 
         configuracao,
 
@@ -2241,24 +2230,34 @@ function melhorarCameraCodigoBarras() {
             ? trilha.getCapabilities()
             : {};
 
-        const avancado = {};
+        if (typeof trilha.applyConstraints !== "function") return;
 
-        if (recursos.focusMode && recursos.focusMode.indexOf("continuous") !== -1) {
-            avancado.focusMode = "continuous";
-        }
+        // Cada melhoria é opcional e isolada: se uma falhar, a câmera permanece aberta.
+        trilha.applyConstraints({
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+        }).catch(function() {}).then(function() {
 
-        // Um zoom leve ocupa mais pixels com as barras sem cortar etiquetas comuns.
-        if (recursos.zoom) {
-            const minimo = Number(recursos.zoom.min || 1);
-            const maximo = Number(recursos.zoom.max || minimo);
-            avancado.zoom = Math.min(maximo, Math.max(minimo, 1.35));
-        }
+            const avancado = {};
 
-        if (Object.keys(avancado).length && typeof trilha.applyConstraints === "function") {
-            trilha.applyConstraints({ advanced: [avancado] }).catch(function() {});
-        }
+            if (recursos.focusMode && recursos.focusMode.indexOf("continuous") !== -1) {
+                avancado.focusMode = "continuous";
+            }
 
-    }, 700);
+            // Zoom moderado: aumenta a quantidade de pixels das barras borradas.
+            if (recursos.zoom) {
+                const minimo = Number(recursos.zoom.min || 1);
+                const maximo = Number(recursos.zoom.max || minimo);
+                avancado.zoom = Math.min(maximo, Math.max(minimo, 1.6));
+            }
+
+            if (Object.keys(avancado).length) {
+                return trilha.applyConstraints({ advanced: [avancado] });
+            }
+
+        }).catch(function() {});
+
+    }, 500);
 }
 
 
