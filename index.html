@@ -298,6 +298,18 @@ button {
 
 #reader {
     margin-top: 20px;
+    width: 100%;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #111;
+}
+
+#reader video {
+    width: 100% !important;
+    object-fit: cover;
 }
 
 #resultado {
@@ -321,6 +333,59 @@ button {
 
 .campo {
     margin-top: 15px;
+}
+
+.campo-autocomplete {
+    position: relative;
+}
+
+.sugestoes-produtos {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 50;
+    max-height: 260px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #bdbdbd;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+}
+
+.sugestao-produto {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: 0;
+    border-bottom: 1px solid #eeeeee;
+    border-radius: 0;
+    background: white;
+    color: #222;
+    text-align: left;
+    font-size: 15px;
+}
+
+.sugestao-produto:last-child {
+    border-bottom: 0;
+}
+
+.sugestao-produto:active,
+.sugestao-produto:focus {
+    background: #fff2f2;
+}
+
+.sugestao-produto-codigo {
+    display: block;
+    color: #b31319;
+    font-weight: bold;
+}
+
+.sugestao-produto-nome {
+    display: block;
+    margin-top: 3px;
+    font-size: 13px;
+    color: #555;
 }
 
 label {
@@ -823,7 +888,7 @@ Sistema de vendas
         Use esta opção quando a câmera não conseguir ler o código de barras.
     </div>
 
-    <div class="campo">
+    <div class="campo campo-autocomplete">
         <label for="codigoProdutoManual">Código do produto</label>
         <input
             id="codigoProdutoManual"
@@ -831,8 +896,13 @@ Sistema de vendas
             placeholder="Ex.: B100GCE"
             autocomplete="off"
             autocapitalize="characters"
-            oninput="this.value = this.value.toUpperCase()"
+            oninput="aoDigitarCodigoProduto(this)"
+            onblur="agendarFechamentoSugestoesProduto()"
             onkeydown="if (event.key === 'Enter') { event.preventDefault(); buscarProdutoDigitado(); }">
+        <div id="sugestoesCodigoProduto"
+             class="sugestoes-produtos oculto"
+             role="listbox"
+             aria-label="Sugestões de produtos"></div>
     </div>
 
     <button
@@ -1372,6 +1442,9 @@ let leitorAtivo = false;
 let carrinho = [];
 
 let produtoPendente = null;
+
+let temporizadorSugestaoProduto = null;
+let numeroBuscaSugestaoProduto = 0;
 
 let usuarioAtual = null;
 let vendaRetroativaAtiva = false;
@@ -1973,14 +2046,23 @@ function iniciarLeitor() {
 
     const configuracao = {
 
-        fps: 10,
+        // Mais quadros e uma faixa larga/baixa favorecem o Code 128,
+        // principalmente quando as barras estão pouco definidas.
+        fps: 20,
 
-        qrbox: {
+        qrbox: function(largura, altura) {
+            return {
+                width: Math.max(240, Math.min(Math.floor(largura * 0.92), 620)),
+                height: Math.max(110, Math.min(Math.floor(altura * 0.38), 230))
+            };
+        },
 
-            width: 320,
+        aspectRatio: 1.777778,
 
-            height: 180
+        disableFlip: true,
 
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
         },
 
         formatsToSupport: [
@@ -1995,7 +2077,11 @@ function iniciarLeitor() {
     leitor.start(
 
         {
-            facingMode: "environment"
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30, min: 15 },
+            focusMode: { ideal: "continuous" }
         },
 
         configuracao,
@@ -2074,7 +2160,10 @@ function iniciarLeitor() {
 
             "Câmera ativada.<br><br>" +
 
-            "Aponte para o código de barras.";
+            "Centralize somente as barras dentro da faixa. " +
+            "Aproxime ou afaste lentamente até a imagem ficar nítida.";
+
+        melhorarCameraCodigoBarras();
 
     })
 
@@ -2134,6 +2223,45 @@ function buscarProduto(codigo) {
 }
 
 
+/* Ajustes extras suportados por câmeras Android/iPhone mais recentes.
+   Navegadores que não oferecem foco/zoom continuam funcionando normalmente. */
+function melhorarCameraCodigoBarras() {
+
+    setTimeout(function() {
+
+        const video = document.querySelector("#reader video");
+
+        if (!video || !video.srcObject) return;
+
+        const trilhas = video.srcObject.getVideoTracks();
+        if (!trilhas.length) return;
+
+        const trilha = trilhas[0];
+        const recursos = typeof trilha.getCapabilities === "function"
+            ? trilha.getCapabilities()
+            : {};
+
+        const avancado = {};
+
+        if (recursos.focusMode && recursos.focusMode.indexOf("continuous") !== -1) {
+            avancado.focusMode = "continuous";
+        }
+
+        // Um zoom leve ocupa mais pixels com as barras sem cortar etiquetas comuns.
+        if (recursos.zoom) {
+            const minimo = Number(recursos.zoom.min || 1);
+            const maximo = Number(recursos.zoom.max || minimo);
+            avancado.zoom = Math.min(maximo, Math.max(minimo, 1.35));
+        }
+
+        if (Object.keys(avancado).length && typeof trilha.applyConstraints === "function") {
+            trilha.applyConstraints({ advanced: [avancado] }).catch(function() {});
+        }
+
+    }, 700);
+}
+
+
 /* =========================================
    BUSCAR PRODUTO PELO CÓDIGO DIGITADO
 ========================================= */
@@ -2149,6 +2277,8 @@ function buscarProdutoDigitado() {
         campo.focus();
         return;
     }
+
+    fecharSugestoesProduto();
 
     resultado.className = "info";
     resultado.innerHTML =
@@ -2169,6 +2299,108 @@ function buscarProdutoDigitado() {
     } else {
         consultar();
     }
+}
+
+
+/* =========================================
+   SUGESTOES PARA CODIGO DIGITADO
+========================================= */
+
+function aoDigitarCodigoProduto(campo) {
+
+    campo.value = String(campo.value || "").toUpperCase();
+    clearTimeout(temporizadorSugestaoProduto);
+
+    const termo = campo.value.trim();
+
+    if (!termo) {
+        numeroBuscaSugestaoProduto++;
+        fecharSugestoesProduto();
+        return;
+    }
+
+    temporizadorSugestaoProduto = setTimeout(function() {
+        buscarSugestoesProduto(termo);
+    }, 250);
+}
+
+function buscarSugestoesProduto(termo) {
+
+    const numeroBusca = ++numeroBuscaSugestaoProduto;
+    const callback = "receberSugestoesProduto_" + Date.now() + "_" + numeroBusca;
+    const script = document.createElement("script");
+
+    window[callback] = function(resultado) {
+        try {
+            if (numeroBusca !== numeroBuscaSugestaoProduto) return;
+            exibirSugestoesProduto(resultado && resultado.sucesso ? resultado.produtos || [] : []);
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+
+    script.src = URL_APPS_SCRIPT +
+        "?acao=buscarSugestoesProduto" +
+        "&termo=" + encodeURIComponent(termo) +
+        "&callback=" + encodeURIComponent(callback);
+
+    script.onerror = function() {
+        if (numeroBusca === numeroBuscaSugestaoProduto) fecharSugestoesProduto();
+        try { delete window[callback]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+    };
+
+    document.body.appendChild(script);
+}
+
+function exibirSugestoesProduto(produtos) {
+
+    const lista = document.getElementById("sugestoesCodigoProduto");
+
+    if (!produtos.length) {
+        fecharSugestoesProduto();
+        return;
+    }
+
+    lista.innerHTML = produtos.map(function(produto) {
+        return "<button type=\"button\" class=\"sugestao-produto\" role=\"option\" " +
+            "onmousedown=\"event.preventDefault()\" " +
+            "onclick=\"selecionarSugestaoProduto('" + escaparAtributoJs(produto.codigo) + "')\">" +
+            "<span class=\"sugestao-produto-codigo\">" + escaparHTML(produto.codigo) + "</span>" +
+            "<span class=\"sugestao-produto-nome\">" + escaparHTML(produto.produto) + "</span>" +
+            "</button>";
+    }).join("");
+
+    lista.classList.remove("oculto");
+}
+
+function escaparAtributoJs(valor) {
+    return String(valor || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, "")
+        .replace(/\n/g, " ");
+}
+
+function selecionarSugestaoProduto(codigo) {
+
+    const campo = document.getElementById("codigoProdutoManual");
+    campo.value = String(codigo || "").toUpperCase();
+    numeroBuscaSugestaoProduto++;
+    fecharSugestoesProduto();
+    buscarProdutoDigitado();
+}
+
+function agendarFechamentoSugestoesProduto() {
+    setTimeout(fecharSugestoesProduto, 180);
+}
+
+function fecharSugestoesProduto() {
+    const lista = document.getElementById("sugestoesCodigoProduto");
+    if (!lista) return;
+    lista.innerHTML = "";
+    lista.classList.add("oculto");
 }
 
 
