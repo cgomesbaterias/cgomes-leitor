@@ -3847,6 +3847,63 @@ function baixarPlanilhaBling() {
         return;
     }
 
+    const periodo = ultimoRelatorioVendas.periodo || {};
+    const botao = document.getElementById("botaoExportarBling");
+    const textoOriginal = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "Reservando números dos pedidos...";
+
+    const callback = "receberNumerosBling_" + Date.now();
+    const script = document.createElement("script");
+
+    window[callback] = function(resultado) {
+        try {
+            if (!resultado || !resultado.sucesso) {
+                alert(resultado && resultado.mensagem
+                    ? resultado.mensagem
+                    : "Não foi possível reservar a numeração dos pedidos.");
+                return;
+            }
+
+            const numeros = resultado.numeros || {};
+            let faltando = 0;
+            (ultimoRelatorioVendas.vendas || []).forEach(function(venda) {
+                venda.numeroPedidoBling = numeros[String(venda.chaveItens || "")] || "";
+                if ((venda.itens || []).length && !venda.numeroPedidoBling) faltando++;
+            });
+
+            if (faltando) {
+                alert("Não foi possível numerar todas as vendas. Consulte o relatório novamente e tente outra vez.");
+                return;
+            }
+
+            gerarPlanilhaBling_(resultado);
+        } finally {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+
+    script.src = URL_APPS_SCRIPT +
+        "?acao=reservarNumerosPedidosBling" +
+        "&dataInicial=" + encodeURIComponent(periodo.dataInicial || "") +
+        "&dataFinal=" + encodeURIComponent(periodo.dataFinal || "") +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+        alert("Não foi possível comunicar com o servidor para reservar os números dos pedidos.");
+        try { delete window[callback]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+    };
+    document.body.appendChild(script);
+}
+
+function gerarPlanilhaBling_(resultadoNumeracao) {
+
     const cabecalhos = [
         "Número pedido", "Nome Comprador", "Data", "CPF/CNPJ Comprador",
         "Endereço Comprador", "Bairro Comprador", "Número Comprador",
@@ -3878,8 +3935,7 @@ function baixarPlanilhaBling() {
             fiscal.nome || venda.clienteFiado || venda.clientePermuta || "Consumidor Final"
         ).trim() || "Consumidor Final";
         const data = String(venda.dataHora || "").substring(0, 10);
-        const dataPedido = data.split("/").reverse().join("");
-        const numeroPedido = dataPedido + "-" + String(venda.numero || "");
+        const numeroPedido = String(venda.numeroPedidoBling || "");
         const quantidadeFormas = quantidadeFormasPagamentoBling_(venda);
         const pagamento = formaPagamentoBling_(venda);
         const observacoes = observacoesBling_(venda);
@@ -3941,9 +3997,14 @@ function baixarPlanilhaBling() {
                 : " vendas antigas não puderam ser associadas aos itens e ficaram fora do arquivo")
         );
     }
-    if (avisos.length) {
-        alert("Planilha gerada. Atenção: " + avisos.join("; ") + ".");
-    }
+    const faixaNova = resultadoNumeracao && resultadoNumeracao.primeiroNovo !== null
+        ? " Novos pedidos reservados: " + resultadoNumeracao.primeiroNovo +
+          (resultadoNumeracao.ultimoNovo !== resultadoNumeracao.primeiroNovo
+              ? " a " + resultadoNumeracao.ultimoNovo
+              : "") + "."
+        : " A numeração já reservada para essas vendas foi mantida.";
+    alert("Planilha gerada." + faixaNova +
+        (avisos.length ? " Atenção: " + avisos.join("; ") + "." : ""));
 }
 
 function formaPagamentoBling_(venda) {
