@@ -726,7 +726,7 @@ Sistema de vendas
 
 <div id="areaClientes" class="area-relatorio oculto">
     <h2>👥 Clientes</h2>
-    <div class="campo"><label>Pesquisar por nome, CPF ou celular</label><input id="pesquisaClientes" type="text"></div>
+    <div class="campo"><label>Pesquisar por nome, CPF, CNPJ ou celular</label><input id="pesquisaClientes" type="text"></div>
     <button class="botao-confirmar" onclick="carregarClientes()">🔍 Pesquisar clientes</button>
     <button class="botao-voltar" onclick="fecharClientes()">⬅️ Voltar para a venda</button>
     <div id="mensagemClientes" class="info" style="margin-top:15px; padding:15px;">Informe um dado para pesquisar ou deixe vazio para listar.</div>
@@ -736,7 +736,7 @@ Sistema de vendas
         <h3>✏️ Editar cliente</h3>
         <input id="clienteLinha" type="hidden">
         <div class="campo"><label>Nome</label><input id="clienteNome" type="text"></div>
-        <div class="campo"><label>CPF</label><input id="clienteCpf" type="text" inputmode="numeric" maxlength="11" oninput="formatarCpfFiscal(this)"></div>
+        <div class="campo"><label>CPF/CNPJ</label><input id="clienteCpf" type="text" inputmode="numeric" maxlength="18" oninput="formatarCpfFiscal(this)"></div>
         <div class="campo"><label>CEP</label><input id="clienteCep" type="text" inputmode="numeric" maxlength="9"></div>
         <div class="campo"><label>Logradouro</label><input id="clienteLogradouro" type="text"></div>
         <div class="campo"><label>Número</label><input id="clienteNumero" type="text"></div>
@@ -1180,11 +1180,11 @@ Sistema de vendas
     <div class="fiado-box">
         <label><input id="desejaDocumentoFiscal" type="checkbox" onchange="alternarDadosFiscais()"> Cliente deseja documento fiscal</label>
         <div id="dadosClienteFiscal" class="oculto">
-            <div class="campo"><label>Buscar cliente por CPF ou celular</label><input id="buscaClienteFiscal" type="text" inputmode="numeric" maxlength="14" placeholder="Digite 11 números"></div>
+            <div class="campo"><label>Buscar cliente por CPF, CNPJ ou celular</label><input id="buscaClienteFiscal" type="text" inputmode="numeric" maxlength="18" placeholder="Digite CPF, CNPJ ou celular"></div>
             <button type="button" class="botao-adicionar" onclick="buscarClienteFiscal()">👤 Buscar cliente cadastrado</button>
             <div id="mensagemBuscaClienteFiscal" class="pequeno"></div>
             <div class="campo"><label>Nome completo *</label><input id="fiscalNome" type="text"></div>
-            <div class="campo"><label>CPF *</label><input id="fiscalCpf" type="text" inputmode="numeric" maxlength="11" placeholder="11 números" oninput="formatarCpfFiscal(this)"></div>
+            <div class="campo"><label>CPF/CNPJ *</label><input id="fiscalCpf" type="text" inputmode="numeric" maxlength="18" placeholder="11 ou 14 números" oninput="formatarCpfFiscal(this)"></div>
             <div class="campo"><label>CEP *</label><input id="fiscalCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscarCepFiscal()"></div>
             <button type="button" class="botao-confirmar" onclick="buscarCepFiscal()">🔎 Buscar endereço pelo CEP</button>
             <div id="mensagemCepFiscal" class="pequeno"></div>
@@ -3214,7 +3214,7 @@ function carregarClientes() {
 function exibirClientesCadastro_() {
     const lista = document.getElementById("listaClientes");
     if (!clientesCadastro.length) { lista.innerHTML = ""; lista.classList.add("oculto"); return; }
-    let html = "<table><thead><tr><th>Nome</th><th>CPF</th><th>Celular</th><th>Saldo FIADO</th><th>Ação</th></tr></thead><tbody>";
+    let html = "<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Celular</th><th>Saldo FIADO</th><th>Ação</th></tr></thead><tbody>";
     clientesCadastro.forEach(function(c, indice) {
         html += "<tr><td>" + escaparHTML(c.nome) + "</td><td>" + escaparHTML(c.cpf) +
             "</td><td>" + escaparHTML(c.celular) + "</td><td>R$ " + formatarMoeda(c.saldoFiado) +
@@ -3235,6 +3235,7 @@ function editarClienteCadastro(indice) {
         clienteEmail: c.email, clienteCelular: c.celular
     };
     Object.keys(campos).forEach(function(id) { document.getElementById(id).value = campos[id] || ""; });
+    formatarCpfFiscal(document.getElementById("clienteCpf"));
     formatarCelularFiscal(document.getElementById("clienteCelular"));
     document.getElementById("formEditarCliente").classList.remove("oculto");
     document.getElementById("formEditarCliente").scrollIntoView({ behavior: "smooth" });
@@ -3345,7 +3346,10 @@ function salvarEdicaoCliente() {
         celular: document.getElementById("clienteCelular").value.replace(/\D/g, "")
     };
     if (!dados.nome) { alert("Informe o nome do cliente."); return; }
-    if (dados.cpf && dados.cpf.length !== 11) { alert("O CPF deve ter 11 números."); return; }
+    if (dados.cpf && dados.cpf.length !== 11 && dados.cpf.length !== 14) {
+        alert("O CPF deve ter 11 números ou o CNPJ deve ter 14 números.");
+        return;
+    }
     if (dados.celular && dados.celular.length !== 11) { alert("O celular deve ter DDD e 9 dígitos."); return; }
     const callback = "receberAtualizacaoCliente_" + Date.now();
     const script = document.createElement("script");
@@ -4685,7 +4689,19 @@ function limparDadosFiscais_() {
 }
 
 function formatarCpfFiscal(campo) {
-    campo.value = campo.value.replace(/\D/g, "").slice(0, 11);
+    const numeros = campo.value.replace(/\D/g, "").slice(0, 14);
+    if (numeros.length <= 11) {
+        campo.value = numeros
+            .replace(/^(\d{3})(\d)/, "$1.$2")
+            .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+            .replace(/\.(\d{3})(\d)/, ".$1-$2");
+        return;
+    }
+    campo.value = numeros
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1/$2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
 function formatarCelularFiscal(campo) {
@@ -4700,8 +4716,8 @@ function formatarCelularFiscal(campo) {
 function buscarClienteFiscal() {
     const documento = document.getElementById("buscaClienteFiscal").value.replace(/\D/g, "");
     const mensagem = document.getElementById("mensagemBuscaClienteFiscal");
-    if (documento.length !== 11) {
-        mensagem.textContent = "Informe um CPF ou celular com 11 números.";
+    if (documento.length !== 11 && documento.length !== 14) {
+        mensagem.textContent = "Informe CPF ou celular com 11 números, ou CNPJ com 14 números.";
         return;
     }
     mensagem.textContent = "Buscando cliente...";
@@ -4716,6 +4732,7 @@ function buscarClienteFiscal() {
             const c = resultado.cliente || {};
             document.getElementById("fiscalNome").value = c.nome || "";
             document.getElementById("fiscalCpf").value = c.cpf || "";
+            formatarCpfFiscal(document.getElementById("fiscalCpf"));
             document.getElementById("fiscalCep").value = c.cep || "";
             document.getElementById("fiscalLogradouro").value = c.logradouro || "";
             document.getElementById("fiscalNumero").value = c.numero || "";
@@ -4786,7 +4803,10 @@ function obterDadosClienteFiscal_() {
         alert("Preencha todos os dados obrigatórios do cliente para o documento fiscal.");
         return false;
     }
-    if (dados.cpf.length !== 11) { alert("Informe um CPF com 11 números."); return false; }
+    if (dados.cpf.length !== 11 && dados.cpf.length !== 14) {
+        alert("Informe um CPF com 11 números ou um CNPJ com 14 números.");
+        return false;
+    }
     if (dados.cep.length !== 8) { alert("Informe um CEP com 8 números."); return false; }
     if (dados.uf.length !== 2) { alert("Informe a UF com 2 letras."); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) { alert("Informe um e-mail válido."); return false; }
