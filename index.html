@@ -388,6 +388,12 @@ button {
     color: #555;
 }
 
+.lista-clientes-fiscais {
+    position: static;
+    margin-top: 8px;
+    max-height: 280px;
+}
+
 label {
     display: block;
     font-weight: bold;
@@ -1180,9 +1186,10 @@ Sistema de vendas
     <div class="fiado-box">
         <label><input id="desejaDocumentoFiscal" type="checkbox" onchange="alternarDadosFiscais()"> Cliente deseja documento fiscal</label>
         <div id="dadosClienteFiscal" class="oculto">
-            <div class="campo"><label>Buscar cliente por CPF, CNPJ ou celular</label><input id="buscaClienteFiscal" type="text" inputmode="numeric" maxlength="18" placeholder="Digite CPF, CNPJ ou celular"></div>
+            <div class="campo"><label>Buscar cliente por nome, CPF, CNPJ ou celular</label><input id="buscaClienteFiscal" type="text" maxlength="80" placeholder="Digite as letras ou números iniciais"></div>
             <button type="button" class="botao-adicionar" onclick="buscarClienteFiscal()">👤 Buscar cliente cadastrado</button>
             <div id="mensagemBuscaClienteFiscal" class="pequeno"></div>
+            <div id="listaBuscaClienteFiscal" class="sugestoes-produtos lista-clientes-fiscais oculto"></div>
             <div class="campo"><label>Nome completo *</label><input id="fiscalNome" type="text"></div>
             <div class="campo"><label>CPF/CNPJ *</label><input id="fiscalCpf" type="text" inputmode="numeric" maxlength="18" placeholder="11 ou 14 números" oninput="formatarCpfFiscal(this)"></div>
             <div class="campo"><label>CEP *</label><input id="fiscalCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" onblur="buscarCepFiscal()"></div>
@@ -1194,7 +1201,7 @@ Sistema de vendas
             <div class="campo"><label>Bairro *</label><input id="fiscalBairro" type="text"></div>
             <div class="campo"><label>Cidade *</label><input id="fiscalCidade" type="text"></div>
             <div class="campo"><label>UF *</label><input id="fiscalUf" type="text" maxlength="2"></div>
-            <div class="campo"><label>E-mail *</label><input id="fiscalEmail" type="email"></div>
+            <div class="campo"><label>E-mail (opcional)</label><input id="fiscalEmail" type="email"></div>
             <div class="campo"><label>Celular com DDD *</label><input id="fiscalCelular" type="tel" inputmode="numeric" maxlength="14" placeholder="(91) 999999999" oninput="formatarCelularFiscal(this)"></div>
         </div>
     </div>
@@ -1445,6 +1452,8 @@ let produtoPendente = null;
 
 let temporizadorSugestaoProduto = null;
 let numeroBuscaSugestaoProduto = 0;
+
+let clientesFiscaisEncontrados = [];
 
 let usuarioAtual = null;
 let vendaRetroativaAtiva = false;
@@ -4685,6 +4694,9 @@ function limparDadosFiscais_() {
         document.getElementById(id).value = "";
     });
     document.getElementById("mensagemBuscaClienteFiscal").textContent = "";
+    document.getElementById("listaBuscaClienteFiscal").innerHTML = "";
+    document.getElementById("listaBuscaClienteFiscal").classList.add("oculto");
+    clientesFiscaisEncontrados = [];
     document.getElementById("mensagemCepFiscal").textContent = "";
 }
 
@@ -4714,12 +4726,17 @@ function formatarCelularFiscal(campo) {
 }
 
 function buscarClienteFiscal() {
-    const documento = document.getElementById("buscaClienteFiscal").value.replace(/\D/g, "");
+    const termo = document.getElementById("buscaClienteFiscal").value.trim();
+    const documento = termo.replace(/\D/g, "");
     const mensagem = document.getElementById("mensagemBuscaClienteFiscal");
-    if (documento.length !== 11 && documento.length !== 14) {
-        mensagem.textContent = "Informe CPF ou celular com 11 números, ou CNPJ com 14 números.";
+    const somenteNumeros = /^\D*\d[\d.\-\/()\s]*$/.test(termo);
+    if (!termo || (somenteNumeros && documento.length < 2) ||
+        (!somenteNumeros && termo.length < 2)) {
+        mensagem.textContent = "Digite ao menos 2 letras ou números iniciais.";
         return;
     }
+    clientesFiscaisEncontrados = [];
+    document.getElementById("listaBuscaClienteFiscal").classList.add("oculto");
     mensagem.textContent = "Buscando cliente...";
     const callback = "receberClienteFiscal_" + Date.now();
     const script = document.createElement("script");
@@ -4729,34 +4746,75 @@ function buscarClienteFiscal() {
                 mensagem.textContent = resultado && resultado.mensagem ? resultado.mensagem : "Cliente não encontrado.";
                 return;
             }
-            const c = resultado.cliente || {};
-            document.getElementById("fiscalNome").value = c.nome || "";
-            document.getElementById("fiscalCpf").value = c.cpf || "";
-            formatarCpfFiscal(document.getElementById("fiscalCpf"));
-            document.getElementById("fiscalCep").value = c.cep || "";
-            document.getElementById("fiscalLogradouro").value = c.logradouro || "";
-            document.getElementById("fiscalNumero").value = c.numero || "";
-            document.getElementById("fiscalComplemento").value = c.complemento || "";
-            document.getElementById("fiscalBairro").value = c.bairro || "";
-            document.getElementById("fiscalCidade").value = c.cidade || "";
-            document.getElementById("fiscalUf").value = c.uf || "";
-            document.getElementById("fiscalEmail").value = c.email || "";
-            const celular = document.getElementById("fiscalCelular");
-            celular.value = c.celular || "";
-            formatarCelularFiscal(celular);
-            mensagem.textContent = "Cliente encontrado. Confira os dados antes de finalizar.";
+            if (resultado.cliente) {
+                preencherClienteFiscal_(resultado.cliente);
+                mensagem.textContent = "Cliente encontrado. Confira os dados antes de finalizar.";
+                return;
+            }
+            clientesFiscaisEncontrados = resultado.clientes || [];
+            if (clientesFiscaisEncontrados.length === 1) {
+                preencherClienteFiscal_(clientesFiscaisEncontrados[0]);
+                mensagem.textContent = "Cliente encontrado. Confira os dados antes de finalizar.";
+                return;
+            }
+            exibirClientesFiscaisEncontrados_();
+            mensagem.textContent = clientesFiscaisEncontrados.length +
+                " clientes encontrados. Selecione o cliente correto.";
         } finally {
             try { delete window[callback]; } catch (e) {}
             try { script.remove(); } catch (e) {}
         }
     };
-    script.src = URL_APPS_SCRIPT + "?acao=buscarClienteFiscal&documento=" + encodeURIComponent(documento) + "&callback=" + encodeURIComponent(callback);
+    script.src = URL_APPS_SCRIPT + "?acao=buscarClienteFiscal&documento=" + encodeURIComponent(termo) + "&callback=" + encodeURIComponent(callback);
     script.onerror = function() {
         mensagem.textContent = "Não foi possível consultar o cliente.";
         try { delete window[callback]; } catch (e) {}
         try { script.remove(); } catch (e) {}
     };
     document.body.appendChild(script);
+}
+
+function exibirClientesFiscaisEncontrados_() {
+    const lista = document.getElementById("listaBuscaClienteFiscal");
+    lista.innerHTML = clientesFiscaisEncontrados.map(function(c, indice) {
+        const documento = String(c.cpf || "");
+        return "<button type=\"button\" class=\"sugestao-produto\" " +
+            "onclick=\"selecionarClienteFiscalEncontrado_(" + indice + ")\">" +
+            "<span class=\"sugestao-produto-codigo\">" + escaparHTML(c.nome || "Sem nome") + "</span>" +
+            "<span class=\"sugestao-produto-nome\">" +
+            escaparHTML(documento || "Sem CPF/CNPJ") +
+            (c.celular ? " · " + escaparHTML(c.celular) : "") +
+            "</span></button>";
+    }).join("");
+    lista.classList.toggle("oculto", !clientesFiscaisEncontrados.length);
+}
+
+function selecionarClienteFiscalEncontrado_(indice) {
+    const cliente = clientesFiscaisEncontrados[indice];
+    if (!cliente) return;
+    preencherClienteFiscal_(cliente);
+    document.getElementById("mensagemBuscaClienteFiscal").textContent =
+        "Cliente selecionado. Confira os dados antes de finalizar.";
+}
+
+function preencherClienteFiscal_(c) {
+    document.getElementById("fiscalNome").value = c.nome || "";
+    document.getElementById("fiscalCpf").value = c.cpf || "";
+    formatarCpfFiscal(document.getElementById("fiscalCpf"));
+    document.getElementById("fiscalCep").value = c.cep || "";
+    document.getElementById("fiscalLogradouro").value = c.logradouro || "";
+    document.getElementById("fiscalNumero").value = c.numero || "";
+    document.getElementById("fiscalComplemento").value = c.complemento || "";
+    document.getElementById("fiscalBairro").value = c.bairro || "";
+    document.getElementById("fiscalCidade").value = c.cidade || "";
+    document.getElementById("fiscalUf").value = c.uf || "";
+    document.getElementById("fiscalEmail").value = c.email || "";
+    const celular = document.getElementById("fiscalCelular");
+    celular.value = c.celular || "";
+    formatarCelularFiscal(celular);
+    const lista = document.getElementById("listaBuscaClienteFiscal");
+    lista.innerHTML = "";
+    lista.classList.add("oculto");
 }
 
 async function buscarCepFiscal() {
@@ -4799,7 +4857,7 @@ function obterDadosClienteFiscal_() {
         email: document.getElementById("fiscalEmail").value.trim(),
         celular: document.getElementById("fiscalCelular").value.replace(/\D/g, "")
     };
-    if (!dados.nome || !dados.logradouro || !dados.numero || !dados.bairro || !dados.cidade || !dados.uf || !dados.email) {
+    if (!dados.nome || !dados.logradouro || !dados.numero || !dados.bairro || !dados.cidade || !dados.uf) {
         alert("Preencha todos os dados obrigatórios do cliente para o documento fiscal.");
         return false;
     }
@@ -4809,7 +4867,10 @@ function obterDadosClienteFiscal_() {
     }
     if (dados.cep.length !== 8) { alert("Informe um CEP com 8 números."); return false; }
     if (dados.uf.length !== 2) { alert("Informe a UF com 2 letras."); return false; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) { alert("Informe um e-mail válido."); return false; }
+    if (dados.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) {
+        alert("O e-mail informado não é válido. Corrija-o ou deixe o campo em branco.");
+        return false;
+    }
     if (dados.celular.length !== 11) { alert("Informe o celular no formato (XX) XXXXXXXXX."); return false; }
     return dados;
 }

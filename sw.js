@@ -1,4 +1,4 @@
-const CACHE_CGOMES = "cgomes-vendas-v1.0.21";
+const CACHE_CGOMES = "cgomes-vendas-v1.0.23";
 const ARQUIVOS_INICIAIS = [
   "./",
   "./index.html",
