@@ -687,7 +687,7 @@ Sistema de vendas
         <input id="dataHoraVendaRetroativa" type="datetime-local">
     </div>
     <div class="campo">
-        <label>LOJA, vendedor ou entregador responsável</label>
+        <label>LOJA, auxiliar, vendedor ou entregador responsável</label>
         <select id="responsavelVendaRetroativa" onchange="selecionarResponsavelRetroativo()">
             <option value="">Selecione...</option>
         </select>
@@ -710,7 +710,7 @@ Sistema de vendas
     <p>O aparelho permanece vinculado ao usuário cadastrado na aba DISPOSITIVOS. Para trocar, a LOJA deve alterar ou remover o vínculo diretamente nessa aba.</p>
 
     <h3>2. Registrar uma venda</h3>
-    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode informar frete opcional, mas deve selecionar o entregador responsável; a LOJA nunca recebe comissão. VENDEDOR informa comissão. Para ENTREGADOR, o frete é opcional: deixe zerado nas vendas de balcão.</p>
+    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. LOJA e AUXILIAR podem informar frete opcional e selecionar o responsável pela entrega; esses perfis não recebem comissão. VENDEDOR informa comissão. Para ENTREGADOR, o frete é opcional: deixe zerado nas vendas de balcão.</p>
 
     <h3>3. Pagamento</h3>
     <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, BOLETO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
@@ -719,10 +719,10 @@ Sistema de vendas
     <p>Marque “Cliente deseja documento fiscal” somente quando necessário. Preencha ou busque o cliente e confira todos os dados. Depois da gravação, o comprovante não fiscal pode ser gerado, impresso ou compartilhado.</p>
 
     <h3>5. Relatórios e Bling</h3>
-    <p>LOJA consulta todas as vendas; VENDEDOR e ENTREGADOR consultam somente as próprias. Escolha o período e use “Baixar planilha para o Bling”. Pagamentos mistos ficam descritos nas observações para ajuste manual.</p>
+    <p>LOJA e AUXILIAR consultam todas as vendas; VENDEDOR e ENTREGADOR consultam somente as próprias. Escolha o período e use “Baixar planilha para o Bling”. Pagamentos mistos ficam descritos nas observações para ajuste manual.</p>
 
     <h3>6. FIADO e clientes</h3>
-    <p>O perfil LOJA registra pagamentos e estornos de FIADO, pesquisa e edita clientes e consulta o histórico. Vendedores e entregadores visualizam apenas os registros autorizados.</p>
+    <p>LOJA e AUXILIAR consultam o FIADO e registram pagamentos, além de pesquisar e editar clientes. Somente LOJA pode estornar recebimentos. Vendedores e entregadores visualizam apenas os registros autorizados.</p>
 
     <h3>7. Em caso de erro</h3>
     <p>Atualize a página, confira a internet e verifique se o aparelho está ativo. Se a gravação falhar, não repita imediatamente sem confirmar antes no relatório se a venda já foi registrada.</p>
@@ -1065,7 +1065,7 @@ Sistema de vendas
     </div>
 
     <div id="areaEntregadorFrete" class="campo oculto">
-        <label>Entregador responsável (obrigatório quando houver frete)</label>
+        <label>Responsável pela entrega (obrigatório quando houver frete)</label>
         <select id="entregadorFrete">
             <option value="">Selecione...</option>
         </select>
@@ -1748,9 +1748,10 @@ function receberDispositivo(resultado) {
     configurarComissaoFrete();
 
     configurarAcessoRelatorio();
-    document.getElementById("botaoClientes").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
-    document.getElementById("botaoVendaRetroativa").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
-    if (usuarioAtual.perfil === "LOJA") carregarEntregadoresFrete();
+    const acessoOperacional = usuarioAtual.perfil === "LOJA" || usuarioAtual.perfil === "AUXILIAR";
+    document.getElementById("botaoClientes").classList.toggle("oculto", !acessoOperacional);
+    document.getElementById("botaoVendaRetroativa").classList.toggle("oculto", !acessoOperacional);
+    if (acessoOperacional) carregarEntregadoresFrete();
 
 
     mostrarResultadoDispositivo(
@@ -1765,8 +1766,8 @@ function receberDispositivo(resultado) {
 
 
 function alternarVendaRetroativa() {
-    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA") {
-        alert("Acesso permitido somente para o perfil LOJA.");
+    if (!usuarioAtual || (usuarioAtual.perfil !== "LOJA" && usuarioAtual.perfil !== "AUXILIAR")) {
+        alert("Acesso permitido somente para LOJA ou AUXILIAR.");
         return;
     }
     vendaRetroativaAtiva = true;
@@ -1823,7 +1824,7 @@ function carregarResponsaveisRetroativos() {
 function selecionarResponsavelRetroativo() {
     const indice = document.getElementById("responsavelVendaRetroativa").value;
     const responsavel = indice === "" ? null : responsaveisRetroativos[Number(indice)];
-    configurarComissaoFrete(responsavel ? responsavel.perfil : "LOJA");
+    configurarComissaoFrete(responsavel ? responsavel.perfil : usuarioAtual.perfil);
 }
 
 function obterResponsavelRetroativo_() {
@@ -1984,12 +1985,12 @@ function configurarComissaoFrete(perfilForcado) {
 
     }
 
-    else if (perfilVenda === "LOJA") {
+    else if (perfilVenda === "LOJA" || perfilVenda === "AUXILIAR") {
 
         area.classList.remove("oculto");
         titulo.textContent = "🚚 Frete da venda";
         label.textContent = "Valor do frete (opcional)";
-        explicacao.textContent = "Informe somente quando houver frete. A LOJA nunca recebe comissão.";
+        explicacao.textContent = "Informe somente quando houver frete. Este perfil não recebe comissão.";
         linhaFrete.classList.remove("oculto");
         linhaComissao.classList.add("oculto");
         linhaLiquido.classList.add("oculto");
@@ -2877,7 +2878,7 @@ function obterTotalVenda() {
 
     const perfilVenda = obterPerfilVenda_();
 
-    if (perfilVenda === "ENTREGADOR" || perfilVenda === "LOJA") {
+    if (perfilVenda === "ENTREGADOR" || perfilVenda === "LOJA" || perfilVenda === "AUXILIAR") {
 
         return totalProdutos + valor;
 
@@ -2943,7 +2944,8 @@ function calcularResumoVenda() {
 
     if (
         perfilVenda === "ENTREGADOR" ||
-        perfilVenda === "LOJA"
+        perfilVenda === "LOJA" ||
+        perfilVenda === "AUXILIAR"
     ) {
 
 
@@ -3066,7 +3068,7 @@ function continuarVenda() {
 
     }
 
-    if (perfilVenda === "LOJA") {
+    if (perfilVenda === "LOJA" || perfilVenda === "AUXILIAR") {
         const freteLoja = Number(document.getElementById("valorComissaoFrete").value) || 0;
         if (freteLoja > 0 && !obterEntregadorFrete_()) {
             alert("Selecione o entregador responsável pelo frete antes de continuar.");
@@ -3175,8 +3177,8 @@ function fecharManual() {
 }
 
 function abrirClientes() {
-    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA") {
-        alert("Acesso permitido somente para o perfil LOJA.");
+    if (!usuarioAtual || (usuarioAtual.perfil !== "LOJA" && usuarioAtual.perfil !== "AUXILIAR")) {
+        alert("Acesso permitido somente para LOJA ou AUXILIAR.");
         return;
     }
     document.getElementById("areaRelatorio").classList.add("oculto");
@@ -3486,7 +3488,7 @@ function exibirFiados(resultado) {
         "<th>Ação</th></tr></thead><tbody>";
 
     recebimentos.forEach(function(recebimento) {
-        const botaoEstorno = resultado.acessoTotal && recebimento.situacao === "ATIVO"
+        const botaoEstorno = usuarioAtual && usuarioAtual.perfil === "LOJA" && recebimento.situacao === "ATIVO"
             ? "<button class=\"botao-excluir\" style=\"min-width:110px\" " +
               "onclick=\"estornarRecebimentoFiado('" + escaparHTML(recebimento.id) + "')\">" +
               "↩️ Estornar</button>"
@@ -3614,7 +3616,7 @@ function configurarAcessoRelatorio() {
     }
 
     botao.textContent =
-        usuarioAtual.perfil === "LOJA"
+        usuarioAtual.perfil === "LOJA" || usuarioAtual.perfil === "AUXILIAR"
             ? "📊 Relatório de todas as vendas"
             : "📊 Relatório das minhas vendas";
 }
@@ -5052,7 +5054,7 @@ function finalizarVenda() {
 
     }
 
-    else if (usuarioVenda.perfil === "LOJA") {
+    else if (usuarioVenda.perfil === "LOJA" || usuarioVenda.perfil === "AUXILIAR") {
 
         frete = valorComissaoFrete;
         comissao = 0;
@@ -5060,7 +5062,7 @@ function finalizarVenda() {
     }
 
     let entregadorFreteSelecionado = null;
-    if (usuarioVenda.perfil === "LOJA" && frete > 0) {
+    if ((usuarioVenda.perfil === "LOJA" || usuarioVenda.perfil === "AUXILIAR") && frete > 0) {
         entregadorFreteSelecionado = obterEntregadorFrete_();
         if (!entregadorFreteSelecionado) {
             alert("Selecione o entregador responsável pelo frete.");
