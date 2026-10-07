@@ -3881,10 +3881,14 @@ function baixarPlanilhaBling() {
             }
 
             const numeros = resultado.numeros || {};
+            const chavesIgnoradas = resultado.chavesIgnoradas || {};
             let faltando = 0;
             (ultimoRelatorioVendas.vendas || []).forEach(function(venda) {
-                venda.numeroPedidoBling = numeros[String(venda.chaveItens || "")] || "";
-                if ((venda.itens || []).length && !venda.numeroPedidoBling) faltando++;
+                const chave = String(venda.chaveItens || "");
+                venda.numeroPedidoBling = numeros[chave] || "";
+                venda.ignorarExportacaoBling = !!chavesIgnoradas[chave];
+                if ((venda.itens || []).length && !venda.numeroPedidoBling &&
+                    !venda.ignorarExportacaoBling) faltando++;
             });
 
             if (faltando) {
@@ -3937,8 +3941,13 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
     const linhas = [cabecalhos];
     let vendasSemItens = 0;
     let vendasPagamentoMisto = 0;
+    let vendasIgnoradas = 0;
 
     ultimoRelatorioVendas.vendas.forEach(function(venda) {
+        if (venda.ignorarExportacaoBling) {
+            vendasIgnoradas++;
+            return;
+        }
         const itens = venda.itens || [];
         if (!itens.length) {
             vendasSemItens++;
@@ -4010,6 +4019,14 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
             (vendasSemItens === 1
                 ? " venda antiga não pôde ser associada aos itens e ficou fora do arquivo"
                 : " vendas antigas não puderam ser associadas aos itens e ficaram fora do arquivo")
+        );
+    }
+    if (vendasIgnoradas > 0) {
+        avisos.push(
+            vendasIgnoradas +
+            (vendasIgnoradas === 1
+                ? " venda anterior a 01/10/2026 estava sem número e foi desconsiderada"
+                : " vendas anteriores a 01/10/2026 estavam sem número e foram desconsideradas")
         );
     }
     const faixaNova = resultadoNumeracao && resultadoNumeracao.primeiroNovo !== null
