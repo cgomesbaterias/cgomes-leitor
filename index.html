@@ -710,10 +710,10 @@ Sistema de vendas
     <p>O aparelho permanece vinculado ao usuário cadastrado na aba DISPOSITIVOS. Para trocar, a LOJA deve alterar ou remover o vínculo diretamente nessa aba.</p>
 
     <h3>2. Registrar uma venda</h3>
-    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. LOJA e AUXILIAR podem informar frete opcional e selecionar o responsável pela entrega; esses perfis não recebem comissão. VENDEDOR informa comissão. Para ENTREGADOR, o frete é opcional: deixe zerado nas vendas de balcão.</p>
+    <p>Leia o código de barras ou digite o código, confira o preço e a quantidade e adicione o produto. O preço precisa ser maior que zero. A LOJA pode escolher qualquer usuário ativo como responsável pela venda/comissão e qualquer usuário ativo como responsável pelo frete, inclusive a mesma pessoa nas duas funções. Comissão e frete são opcionais e independentes. AUXILIAR, VENDEDOR e ENTREGADOR mantêm as regras próprias de seus perfis.</p>
 
     <h3>3. Pagamento</h3>
-    <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, BOLETO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento.</p>
+    <p>É possível combinar PROPIG, REDE, PIX, DINHEIRO, BOLETO, PERMUTA e FIADO. A soma precisa corresponder exatamente ao total da venda. No FIADO, informe cliente e vencimento. Na PERMUTA, informe o cliente e uma observação que identifique o bem ou o acordo.</p>
 
     <h3>4. Documento fiscal e comprovante</h3>
     <p>Marque “Cliente deseja documento fiscal” somente quando necessário. Preencha ou busque o cliente e confira todos os dados. Depois da gravação, o comprovante não fiscal pode ser gerado, impresso ou compartilhado.</p>
@@ -1046,6 +1046,13 @@ Sistema de vendas
         Comissão/Frete
     </h2>
 
+    <div id="areaVendedorLoja" class="campo oculto">
+        <label>Responsável pela venda/comissão (opcional)</label>
+        <select id="vendedorVendaLoja" onchange="selecionarVendedorVendaLoja()">
+            <option value="">Sem comissão — venda da LOJA</option>
+        </select>
+    </div>
+
 
     <div class="campo">
 
@@ -1064,8 +1071,14 @@ Sistema de vendas
 
     </div>
 
+    <div id="areaFreteComVendedor" class="campo oculto">
+        <label>Valor do frete</label>
+        <input id="valorFreteComVendedor" type="number" step="0.01" min="0"
+               value="0" inputmode="decimal" oninput="calcularResumoVenda()">
+    </div>
+
     <div id="areaEntregadorFrete" class="campo oculto">
-        <label>Responsável pela entrega (obrigatório quando houver frete)</label>
+        <label>Responsável pelo frete (obrigatório quando houver frete)</label>
         <select id="entregadorFrete">
             <option value="">Selecione...</option>
         </select>
@@ -1338,6 +1351,13 @@ Sistema de vendas
 
 </div>
 
+        <div id="campoObservacaoPermuta" class="fiado-box oculto">
+            <label for="observacaoPermuta">Observação da PERMUTA</label>
+            <textarea id="observacaoPermuta" rows="3"
+                      placeholder="Descreva o bem, produto, veículo ou acordo da permuta"></textarea>
+            <div class="pequeno">Informe os detalhes necessários para identificar a permuta.</div>
+        </div>
+
 
         <div class="campo">
 
@@ -1459,6 +1479,7 @@ let usuarioAtual = null;
 let vendaRetroativaAtiva = false;
 let responsaveisRetroativos = [];
 let entregadoresFrete = [];
+let vendedoresVendaLoja = [];
 
 let pagamentos = [];
 
@@ -1752,6 +1773,7 @@ function receberDispositivo(resultado) {
     document.getElementById("botaoClientes").classList.toggle("oculto", !acessoOperacional);
     document.getElementById("botaoVendaRetroativa").classList.toggle("oculto", !acessoOperacional);
     if (acessoOperacional) carregarEntregadoresFrete();
+    if (usuarioAtual.perfil === "LOJA") carregarResponsaveisRetroativos();
 
 
     mostrarResultadoDispositivo(
@@ -1807,6 +1829,16 @@ function carregarResponsaveisRetroativos() {
                 opcao.textContent = item.usuario + " — " + item.perfil;
                 select.appendChild(opcao);
             });
+
+            vendedoresVendaLoja = responsaveisRetroativos.slice();
+            const selectVendedor = document.getElementById("vendedorVendaLoja");
+            selectVendedor.innerHTML = '<option value="">Sem comissão — venda da LOJA</option>';
+            vendedoresVendaLoja.forEach(function(item, indice) {
+                const opcao = document.createElement("option");
+                opcao.value = String(indice);
+                opcao.textContent = item.usuario + " — " + item.perfil;
+                selectVendedor.appendChild(opcao);
+            });
         } finally {
             delete window[callback];
         }
@@ -1833,9 +1865,43 @@ function obterResponsavelRetroativo_() {
     return indice === "" ? null : responsaveisRetroativos[Number(indice)];
 }
 
+function obterVendedorVendaLoja_() {
+    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA" || vendaRetroativaAtiva) return null;
+    const indice = document.getElementById("vendedorVendaLoja").value;
+    return indice === "" ? null : vendedoresVendaLoja[Number(indice)];
+}
+
+function selecionarVendedorVendaLoja() {
+    configurarComissaoFrete();
+}
+
 function obterPerfilVenda_() {
     const responsavel = obterResponsavelRetroativo_();
-    return responsavel ? responsavel.perfil : (usuarioAtual ? usuarioAtual.perfil : "");
+    const vendedorLoja = obterVendedorVendaLoja_();
+    return responsavel ? responsavel.perfil
+        : vendedorLoja ? vendedorLoja.perfil
+        : (usuarioAtual ? usuarioAtual.perfil : "");
+}
+
+function vendaComResponsavelPelaLoja_() {
+    return !!usuarioAtual && usuarioAtual.perfil === "LOJA" &&
+        !!(obterResponsavelRetroativo_() || obterVendedorVendaLoja_());
+}
+
+function obterFreteVenda_() {
+    if (vendaComResponsavelPelaLoja_()) {
+        return Number(document.getElementById("valorFreteComVendedor").value) || 0;
+    }
+    const perfilVenda = obterPerfilVenda_();
+    return ["LOJA", "AUXILIAR", "ENTREGADOR"].indexOf(perfilVenda) !== -1
+        ? Number(document.getElementById("valorComissaoFrete").value) || 0
+        : 0;
+}
+
+function obterComissaoVenda_() {
+    return (vendaComResponsavelPelaLoja_() || obterPerfilVenda_() === "VENDEDOR")
+        ? Number(document.getElementById("valorComissaoFrete").value) || 0
+        : 0;
 }
 
 function carregarEntregadoresFrete() {
@@ -1849,7 +1915,7 @@ function carregarEntregadoresFrete() {
             entregadoresFrete.forEach(function(item, indice) {
                 const opcao = document.createElement("option");
                 opcao.value = String(indice);
-                opcao.textContent = item.usuario;
+                opcao.textContent = item.usuario + " — " + item.perfil;
                 select.appendChild(opcao);
             });
         } finally {
@@ -1874,7 +1940,7 @@ function obterEntregadorFrete_() {
 
 function configurarComissaoFrete(perfilForcado) {
 
-    const perfilVenda = perfilForcado || usuarioAtual.perfil;
+    const perfilVenda = perfilForcado || obterPerfilVenda_();
 
 
     const area =
@@ -1919,9 +1985,32 @@ function configurarComissaoFrete(perfilForcado) {
         );
 
     const areaEntregador = document.getElementById("areaEntregadorFrete");
+    const areaVendedorLoja = document.getElementById("areaVendedorLoja");
+    const areaFreteComVendedor = document.getElementById("areaFreteComVendedor");
+    const vendaResponsavelPelaLoja = vendaComResponsavelPelaLoja_();
+
+    areaVendedorLoja.classList.toggle(
+        "oculto",
+        !usuarioAtual || usuarioAtual.perfil !== "LOJA" || vendaRetroativaAtiva
+    );
+    areaFreteComVendedor.classList.add("oculto");
 
 
-    if (
+    if (vendaResponsavelPelaLoja) {
+
+        area.classList.remove("oculto");
+        titulo.textContent = "💰 Comissão e 🚚 frete";
+        label.textContent = "Valor da comissão (opcional)";
+        explicacao.textContent = "Comissão e frete são opcionais e independentes. A mesma pessoa pode ser selecionada nas duas funções.";
+        linhaFrete.classList.remove("oculto");
+        linhaComissao.classList.remove("oculto");
+        linhaLiquido.classList.remove("oculto");
+        areaEntregador.classList.remove("oculto");
+        areaFreteComVendedor.classList.remove("oculto");
+
+    }
+
+    else if (
         perfilVenda ===
         "VENDEDOR"
     ) {
@@ -2866,33 +2955,7 @@ function obterTotalVenda() {
         obterTotalProdutos();
 
 
-    const valor =
-        Number(
-            document
-                .getElementById(
-                    "valorComissaoFrete"
-                )
-                .value
-        ) || 0;
-
-
-    const perfilVenda = obterPerfilVenda_();
-
-    if (perfilVenda === "ENTREGADOR" || perfilVenda === "LOJA" || perfilVenda === "AUXILIAR") {
-
-        return totalProdutos + valor;
-
-    }
-
-
-    /*
-       Para vendedor:
-       comissão NÃO aumenta o valor
-       cobrado do cliente.
-    */
-
-
-    return totalProdutos;
+    return totalProdutos + obterFreteVenda_();
 
 }
 
@@ -2918,16 +2981,8 @@ function calcularResumoVenda() {
         obterTotalProdutos();
 
 
-    const valor =
-        Number(
-            document
-                .getElementById(
-                    "valorComissaoFrete"
-                )
-                .value
-        ) || 0;
-
-    const perfilVenda = obterPerfilVenda_();
+    const frete = obterFreteVenda_();
+    const comissao = obterComissaoVenda_();
 
 
     document
@@ -2942,85 +2997,12 @@ function calcularResumoVenda() {
         );
 
 
-    if (
-        perfilVenda === "ENTREGADOR" ||
-        perfilVenda === "LOJA" ||
-        perfilVenda === "AUXILIAR"
-    ) {
-
-
-        const totalPagar =
-            totalProdutos + valor;
-
-
-        document
-            .getElementById(
-                "resumoFrete"
-            )
-            .textContent =
-
-            "R$ " +
-            formatarMoeda(valor);
-
-
-        document
-            .getElementById(
-                "resumoTotalPagar"
-            )
-            .textContent =
-
-            "R$ " +
-            formatarMoeda(
-                totalPagar
-            );
-
-    }
-
-
-    else if (
-        perfilVenda ===
-        "VENDEDOR"
-    ) {
-
-
-        const liquido =
-            totalProdutos - valor;
-
-
-        document
-            .getElementById(
-                "resumoComissao"
-            )
-            .textContent =
-
-            "R$ " +
-            formatarMoeda(valor);
-
-
-        document
-            .getElementById(
-                "resumoTotalPagar"
-            )
-            .textContent =
-
-            "R$ " +
-            formatarMoeda(
-                totalProdutos
-            );
-
-
-        document
-            .getElementById(
-                "resumoLiquido"
-            )
-            .textContent =
-
-            "R$ " +
-            formatarMoeda(
-                liquido
-            );
-
-    }
+    document.getElementById("resumoFrete").textContent = "R$ " + formatarMoeda(frete);
+    document.getElementById("resumoComissao").textContent = "R$ " + formatarMoeda(comissao);
+    document.getElementById("resumoTotalPagar").textContent =
+        "R$ " + formatarMoeda(totalProdutos + frete);
+    document.getElementById("resumoLiquido").textContent =
+        "R$ " + formatarMoeda(totalProdutos - comissao);
 
 }
 
@@ -3047,7 +3029,7 @@ function continuarVenda() {
 
     const perfilVenda = obterPerfilVenda_();
 
-    if (perfilVenda === "VENDEDOR") {
+    if (perfilVenda === "VENDEDOR" && !vendaComResponsavelPelaLoja_()) {
 
         const valorComissaoFrete =
             Number(
@@ -3068,10 +3050,10 @@ function continuarVenda() {
 
     }
 
-    if (perfilVenda === "LOJA" || perfilVenda === "AUXILIAR") {
-        const freteLoja = Number(document.getElementById("valorComissaoFrete").value) || 0;
-        if (freteLoja > 0 && !obterEntregadorFrete_()) {
-            alert("Selecione o entregador responsável pelo frete antes de continuar.");
+    if (perfilVenda === "LOJA" || perfilVenda === "AUXILIAR" || vendaComResponsavelPelaLoja_()) {
+        const freteVenda = obterFreteVenda_();
+        if (freteVenda > 0 && !obterEntregadorFrete_()) {
+            alert("Selecione o usuário responsável pelo frete antes de continuar.");
             document.getElementById("entregadorFrete").focus();
             return;
         }
@@ -3781,6 +3763,9 @@ function exibirRelatorio(resultado) {
                 formas.push(forma[0] + ": R$ " + formatarMoeda(forma[1]));
             }
         });
+        if (venda.observacaoPermuta) {
+            formas.push("Obs. PERMUTA: " + venda.observacaoPermuta);
+        }
 
         html += "<tr><td>" + escaparHTML(venda.dataHora) +
             "</td><td>" + escaparHTML(venda.numero) +
@@ -3836,6 +3821,7 @@ function abrirComprovanteRelatorio_(indiceVenda) {
             clienteFiscal: venda.clienteFiscal || null,
             clienteFiado: venda.clienteFiado || "",
             clientePermuta: venda.clientePermuta || "",
+            observacaoPermuta: venda.observacaoPermuta || "",
             usuarioAtual: {
                 usuario: venda.usuario || "",
                 perfil: venda.perfil || ""
@@ -4076,6 +4062,7 @@ function observacoesBling_(venda) {
     });
     if (formas.length > 1) partes.push("PAGAMENTO MISTO - AJUSTAR MANUALMENTE NO BLING");
     if (formas.length) partes.push("Pagamentos: " + formas.join(" | "));
+    if (venda.observacaoPermuta) partes.push("Observação da PERMUTA: " + venda.observacaoPermuta);
     return partes.join(" - ");
 }
 
@@ -4144,6 +4131,8 @@ function alterarFormaPagamento() {
 
     const detalhesFiado =
         document.getElementById("camposDetalhesFiado");
+    const campoObservacaoPermuta =
+        document.getElementById("campoObservacaoPermuta");
 
 
     /*
@@ -4151,6 +4140,9 @@ function alterarFormaPagamento() {
     */
 
     if (forma === "FIADO") {
+
+        campoObservacaoPermuta.classList.add("oculto");
+        document.getElementById("observacaoPermuta").value = "";
 
         campo
             .classList
@@ -4198,6 +4190,7 @@ function alterarFormaPagamento() {
             "Informe o cliente relacionado à permuta.";
 
         detalhesFiado.classList.add("oculto");
+        campoObservacaoPermuta.classList.remove("oculto");
 
 
         return;
@@ -4212,12 +4205,15 @@ function alterarFormaPagamento() {
         .classList
         .add("oculto");
 
+    campoObservacaoPermuta.classList.add("oculto");
+
 
     input.value = "";
 
     detalhesFiado.classList.add("oculto");
 
     document.getElementById("vencimentoFiado").value = "";
+    document.getElementById("observacaoPermuta").value = "";
 
 }
 
@@ -4345,6 +4341,7 @@ function adicionarPagamento() {
 let cliente = "";
 
 let vencimento = "";
+let observacao = "";
 
 
 if (
@@ -4407,6 +4404,15 @@ if (
 
     }
 
+    if (forma === "PERMUTA") {
+        observacao = document.getElementById("observacaoPermuta").value.trim();
+        if (!observacao) {
+            alert("Informe a observação da PERMUTA.");
+            document.getElementById("observacaoPermuta").focus();
+            return;
+        }
+    }
+
 }
 
 
@@ -4418,7 +4424,9 @@ if (
 
         cliente: cliente,
 
-        vencimento: vencimento
+        vencimento: vencimento,
+
+        observacao: observacao
 
     });
 
@@ -4448,8 +4456,10 @@ if (
         .value = "";
 
     document.getElementById("vencimentoFiado").value = "";
+    document.getElementById("observacaoPermuta").value = "";
 
     document.getElementById("camposDetalhesFiado").classList.add("oculto");
+    document.getElementById("campoObservacaoPermuta").classList.add("oculto");
 
 
     document
@@ -4602,6 +4612,15 @@ function atualizarPagamentos() {
 
                             ""
 
+                        }
+
+                        ${
+                            pagamento.forma === "PERMUTA"
+                            ? `<div class="pequeno">
+                                Cliente: ${escaparHTML(pagamento.cliente)}
+                                <br>Observação: ${escaparHTML(pagamento.observacao || "")}
+                               </div>`
+                            : ""
                         }
 
                         <button
@@ -4992,7 +5011,8 @@ function finalizarVenda() {
         return;
     }
 
-    const usuarioVenda = responsavelRetroativo || usuarioAtual;
+    const vendedorSelecionadoLoja = obterVendedorVendaLoja_();
+    const usuarioVenda = responsavelRetroativo || vendedorSelecionadoLoja || usuarioAtual;
 
 
     const clienteFiscal = obterDadosClienteFiscal_();
@@ -5015,74 +5035,15 @@ function finalizarVenda() {
        ======================================================
     */
 
-    const valorComissaoFrete =
-        Number(
-            document
-                .getElementById(
-                    "valorComissaoFrete"
-                )
-                .value
-        ) || 0;
-
-
-    let frete = 0;
-
-    let comissao = 0;
-
-
-    /*
-       VENDEDOR:
-       o valor informado é comissão.
-
-       A comissão NÃO aumenta o valor
-       cobrado do cliente.
-    */
-
-    if (
-        usuarioVenda.perfil ===
-        "VENDEDOR"
-    ) {
-
-        comissao =
-            valorComissaoFrete;
-
-        frete = 0;
-
-    }
-
-
-    /*
-       ENTREGADOR:
-       o valor informado é frete.
-
-       O frete aumenta o valor
-       cobrado do cliente.
-    */
-
-    else if (
-        usuarioVenda.perfil ===
-        "ENTREGADOR"
-    ) {
-
-        frete =
-            valorComissaoFrete;
-
-        comissao = 0;
-
-    }
-
-    else if (usuarioVenda.perfil === "LOJA" || usuarioVenda.perfil === "AUXILIAR") {
-
-        frete = valorComissaoFrete;
-        comissao = 0;
-
-    }
+    const frete = obterFreteVenda_();
+    const comissao = obterComissaoVenda_();
 
     let entregadorFreteSelecionado = null;
-    if ((usuarioVenda.perfil === "LOJA" || usuarioVenda.perfil === "AUXILIAR") && frete > 0) {
+    if (frete > 0 && (usuarioVenda.perfil === "LOJA" || usuarioVenda.perfil === "AUXILIAR" ||
+        vendaComResponsavelPelaLoja_())) {
         entregadorFreteSelecionado = obterEntregadorFrete_();
         if (!entregadorFreteSelecionado) {
-            alert("Selecione o entregador responsável pelo frete.");
+            alert("Selecione o usuário responsável pelo frete.");
             document.getElementById("entregadorFrete").focus();
             return;
         }
@@ -5114,6 +5075,7 @@ function finalizarVenda() {
     let vencimentoFiado = "";
       
       let clientePermuta = "";
+      let observacoesPermuta = [];
 
 
     /*
@@ -5207,6 +5169,8 @@ else if (
     clientePermuta =
         pagamento.cliente || "";
 
+    if (pagamento.observacao) observacoesPermuta.push(pagamento.observacao);
+
 }
 
         }
@@ -5234,6 +5198,11 @@ else if (
             idAparelhoLoja: usuarioAtual.idAparelho,
             idAparelhoResponsavel: responsavelRetroativo.idAparelho,
             dataHora: dataHoraRetroativa
+        } : null,
+
+        lancamentoLoja: vendedorSelecionadoLoja ? {
+            idAparelhoLoja: usuarioAtual.idAparelho,
+            idAparelhoVendedor: vendedorSelecionadoLoja.idAparelho
         } : null,
 
         usuarioAtual: {
@@ -5300,6 +5269,9 @@ vencimentoFiado:
 
 clientePermuta:
     clientePermuta,
+
+observacaoPermuta:
+    observacoesPermuta.join(" | "),
 
 itens:
             carrinho.map(
@@ -5428,6 +5400,8 @@ itens:
                     pagamentos = [];
 
                     document.getElementById("entregadorFrete").value = "";
+                    document.getElementById("vendedorVendaLoja").value = "";
+                    document.getElementById("valorFreteComVendedor").value = 0;
 
                     produtoPendente = null;
 
@@ -5473,6 +5447,8 @@ itens:
                             "valorComissaoFrete"
                         )
                         .value = 0;
+
+                    configurarComissaoFrete();
 
 
                     /*
@@ -5780,6 +5756,7 @@ function exibirComprovante(resultado, dadosVenda) {
         perfil: dadosVenda.usuarioAtual.perfil || "",
         itens: itens,
         pagamentos: formas,
+        observacaoPermuta: String(dadosVenda.observacaoPermuta || ""),
         totalProdutos: Number(dadosVenda.totalProdutos) || 0,
         frete: Number(dadosVenda.frete) || 0,
         totalVenda: Number(resultado.totalVenda) || 0
@@ -5821,6 +5798,10 @@ function exibirComprovante(resultado, dadosVenda) {
         formas.map(function(item) {
             return escaparHTML(item.forma) + ": R$ " + formatarMoeda(item.valor);
         }).join("<br>") + "</p>" +
+        (ultimoComprovante.observacaoPermuta
+            ? "<p><strong>Observação da PERMUTA:</strong><br>" +
+              escaparHTML(ultimoComprovante.observacaoPermuta) + "</p>"
+            : "") +
         "<p style=\"text-align:center\"><small>Obrigado pela preferência!</small></p>";
 
     document.getElementById("conteudoComprovante").innerHTML = html;
@@ -5878,6 +5859,9 @@ function textoComprovante_() {
     ultimoComprovante.pagamentos.forEach(function(item) {
         linhas.push(item.forma + ": R$ " + formatarMoeda(item.valor));
     });
+    if (ultimoComprovante.observacaoPermuta) {
+        linhas.push("", "OBSERVAÇÃO DA PERMUTA", ultimoComprovante.observacaoPermuta);
+    }
     linhas.push("", "Obrigado pela preferência!");
     return linhas.join("\n");
 }
