@@ -164,6 +164,52 @@ button {
     background: #ede3ff;
 }
 
+.painel-produtos { overflow: hidden; padding: 0; background: #f4f6f9; border: 1px solid #dfe3e8; }
+.cabecalho-relatorio-produtos { display: flex; align-items: center; gap: 18px; padding: 22px; color: #fff; background: linear-gradient(135deg, #101828 0%, #263c5b 72%, #c99a2e 180%); }
+.cabecalho-relatorio-produtos img { width: 118px; max-height: 88px; padding: 7px; object-fit: contain; background: #fff; border-radius: 12px; }
+.cabecalho-relatorio-produtos h2 { margin: 0 0 6px; font-size: 23px; }
+.cabecalho-relatorio-produtos p { margin: 3px 0; line-height: 1.35; font-size: 13px; }
+.conteudo-relatorio-produtos { padding: 18px; }
+.filtros-relatorio-produtos, .acoes-relatorio-produtos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.acoes-relatorio-produtos button { margin-top: 10px; }
+.grade-graficos-produtos { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr); gap: 14px; margin-top: 18px; }
+.cartao-grafico-produtos { min-width: 0; padding: 16px; background: #fff; border: 1px solid #e2e6ea; border-radius: 12px; box-shadow: 0 3px 12px rgba(16, 24, 40, .06); }
+.cartao-grafico-produtos h3 { margin: 0 0 12px; font-size: 16px; color: #263c5b; }
+.cartao-grafico-produtos canvas { display: block; width: 100%; height: 300px; }
+.legenda-grafico-produtos { display: grid; gap: 7px; margin-top: 10px; font-size: 12px; }
+.item-legenda-produtos { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.item-legenda-produtos span:first-child { display: flex; align-items: center; min-width: 0; }
+.cor-legenda-produtos { width: 10px; height: 10px; flex: 0 0 10px; margin-right: 7px; border-radius: 50%; }
+
+@media (max-width: 650px) {
+    .cabecalho-relatorio-produtos { align-items: flex-start; padding: 18px; }
+    .cabecalho-relatorio-produtos img { width: 88px; }
+    .cabecalho-relatorio-produtos h2 { font-size: 19px; }
+    .filtros-relatorio-produtos, .acoes-relatorio-produtos, .grade-graficos-produtos { grid-template-columns: 1fr; }
+}
+
+@media print {
+    body.imprimindo-relatorio-produtos { padding: 0; background: #fff; }
+    body.imprimindo-relatorio-produtos * { visibility: hidden; }
+    body.imprimindo-relatorio-produtos #areaRelatorioProdutos,
+    body.imprimindo-relatorio-produtos #areaRelatorioProdutos * { visibility: visible; }
+    body.imprimindo-relatorio-produtos #areaRelatorioProdutos { position: absolute; left: 0; top: 0; width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #fff; }
+    body.imprimindo-relatorio-produtos .conteudo-relatorio-produtos { padding: 12mm; }
+    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos { color: #111; background: #fff; border-bottom: 3px solid #c99a2e; }
+    body.imprimindo-relatorio-produtos .filtros-relatorio-produtos,
+    body.imprimindo-relatorio-produtos .acoes-relatorio-produtos,
+    body.imprimindo-relatorio-produtos #mensagemRelatorioProdutos,
+    body.imprimindo-relatorio-produtos details { display: none !important; }
+    body.imprimindo-relatorio-produtos .grade-graficos-produtos { grid-template-columns: 1.35fr .85fr; break-inside: avoid; }
+    body.imprimindo-relatorio-produtos .tabela-relatorio { overflow: visible; }
+    body.imprimindo-relatorio-produtos .tabela-relatorio table { font-size: 10px; }
+    body.imprimindo-relatorio-produtos .tabela-relatorio th,
+    body.imprimindo-relatorio-produtos .tabela-relatorio td { padding: 5px; white-space: normal; }
+    body.imprimindo-relatorio-produtos .tabela-relatorio th:last-child,
+    body.imprimindo-relatorio-produtos .tabela-relatorio td:last-child { display: none; }
+    @page { size: A4 portrait; margin: 8mm; }
+}
+
 .comprovante-venda {
     margin-top: 22px;
     padding: 18px;
@@ -661,6 +707,15 @@ Sistema de vendas
 
 </button>
 
+<button
+    id="botaoRelatorioProdutos"
+    class="botao-relatorio oculto"
+    onclick="abrirRelatorioProdutos()">
+
+    🔋 Baterias vendidas por período
+
+</button>
+
 
 <button
     id="botaoFiados"
@@ -719,7 +774,7 @@ Sistema de vendas
     <p>Marque “Cliente deseja documento fiscal” somente quando necessário. Preencha ou busque o cliente e confira todos os dados. Depois da gravação, o comprovante não fiscal pode ser gerado, impresso ou compartilhado.</p>
 
     <h3>5. Relatórios e Bling</h3>
-    <p>LOJA e AUXILIAR consultam todas as vendas; VENDEDOR e ENTREGADOR consultam somente as próprias. Escolha o período e use “Baixar planilha para o Bling”. Pagamentos mistos ficam descritos nas observações para ajuste manual.</p>
+    <p>LOJA e AUXILIAR consultam todas as vendas; VENDEDOR e ENTREGADOR consultam somente as próprias. O relatório de baterias vendidas por período, baseado na aba ITENS_VENDAS, é exclusivo da LOJA. Escolha o período e use “Baixar planilha para o Bling”. Pagamentos mistos ficam descritos nas observações para ajuste manual.</p>
 
     <h3>6. FIADO e clientes</h3>
     <p>LOJA e AUXILIAR consultam o FIADO e registram pagamentos, além de pesquisar e editar clientes. Somente LOJA pode estornar recebimentos. Vendedores e entregadores visualizam apenas os registros autorizados.</p>
@@ -802,6 +857,37 @@ Sistema de vendas
 
     <div id="listaRelatorio" class="tabela-relatorio oculto"></div>
 
+</div>
+
+<div id="areaRelatorioProdutos" class="area-relatorio painel-produtos oculto">
+    <header class="cabecalho-relatorio-produtos">
+        <img id="logoRelatorioProdutos" src="./icone-cgomes.png" alt="Logo C Gomes Baterias">
+        <div>
+            <h2>C GOMES BATERIAS</h2>
+            <p>Av. Roberto Camelier, 652 - Jurunas<br>Entre Caripunas e Timbiras</p>
+            <p>Telefone: (91) 98162-3687</p>
+            <p><strong>Relatório de baterias vendidas</strong><br><span id="cabecalhoPeriodoProdutos">Período ainda não consultado</span></p>
+        </div>
+    </header>
+    <div class="conteudo-relatorio-produtos">
+        <div class="filtros-relatorio-produtos">
+            <div class="campo"><label>Data inicial</label><input id="produtosDataInicial" type="date"></div>
+            <div class="campo"><label>Data final</label><input id="produtosDataFinal" type="date"></div>
+        </div>
+        <button class="botao-confirmar" onclick="carregarRelatorioProdutos()">🔍 Consultar modelos vendidos</button>
+        <div class="acoes-relatorio-produtos">
+            <button id="botaoExportarProdutos" class="botao-adicionar oculto" onclick="baixarRelatorioProdutos()">⬇️ Baixar relatório em Excel</button>
+            <button id="botaoImprimirProdutos" class="botao-relatorio oculto" onclick="imprimirRelatorioProdutos()">🖨️ Imprimir / Salvar em PDF</button>
+        </div>
+        <button class="botao-voltar" onclick="fecharRelatorioProdutos()">⬅️ Voltar para a venda</button>
+        <div id="mensagemRelatorioProdutos" class="info" style="margin-top:15px; padding:15px;">Escolha o período para consultar.</div>
+        <div id="resumoRelatorioProdutos" class="grade-relatorio oculto"></div>
+        <div id="graficosRelatorioProdutos" class="grade-graficos-produtos oculto">
+            <section class="cartao-grafico-produtos"><h3>Ranking por unidades vendidas</h3><canvas id="graficoBarrasProdutos"></canvas></section>
+            <section class="cartao-grafico-produtos"><h3>Participação por modelo</h3><canvas id="graficoPizzaProdutos"></canvas><div id="legendaGraficoProdutos" class="legenda-grafico-produtos"></div></section>
+        </div>
+        <div id="listaRelatorioProdutos" class="tabela-relatorio oculto"></div>
+    </div>
 </div>
 
 
@@ -1484,6 +1570,7 @@ let vendedoresVendaLoja = [];
 let pagamentos = [];
 
 let ultimoRelatorioVendas = null;
+let ultimoRelatorioProdutos = null;
 
 let ultimoComprovante = null;
 
@@ -1772,6 +1859,7 @@ function receberDispositivo(resultado) {
     const acessoOperacional = usuarioAtual.perfil === "LOJA" || usuarioAtual.perfil === "AUXILIAR";
     document.getElementById("botaoClientes").classList.toggle("oculto", !acessoOperacional);
     document.getElementById("botaoVendaRetroativa").classList.toggle("oculto", !acessoOperacional);
+    document.getElementById("botaoRelatorioProdutos").classList.toggle("oculto", usuarioAtual.perfil !== "LOJA");
     if (acessoOperacional) carregarEntregadoresFrete();
     if (usuarioAtual.perfil === "LOJA") carregarResponsaveisRetroativos();
 
@@ -3627,6 +3715,311 @@ function abrirRelatorio() {
 function fecharRelatorio() {
     document.getElementById("areaRelatorio").classList.add("oculto");
     document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
+}
+
+function abrirRelatorioProdutos() {
+    if (!usuarioAtual || usuarioAtual.perfil !== "LOJA") {
+        alert("Acesso permitido somente para o perfil LOJA.");
+        return;
+    }
+    const hoje = new Date();
+    const dataLocal = hoje.getFullYear() + "-" +
+        String(hoje.getMonth() + 1).padStart(2, "0") + "-" +
+        String(hoje.getDate()).padStart(2, "0");
+    if (!document.getElementById("produtosDataInicial").value) {
+        document.getElementById("produtosDataInicial").value = dataLocal;
+    }
+    if (!document.getElementById("produtosDataFinal").value) {
+        document.getElementById("produtosDataFinal").value = dataLocal;
+    }
+    document.getElementById("areaRelatorioProdutos").classList.remove("oculto");
+    document.getElementById("areaRelatorioProdutos").scrollIntoView({ behavior: "smooth" });
+    carregarRelatorioProdutos();
+}
+
+function fecharRelatorioProdutos() {
+    document.getElementById("areaRelatorioProdutos").classList.add("oculto");
+    document.getElementById("resultado").scrollIntoView({ behavior: "smooth" });
+}
+
+function carregarRelatorioProdutos() {
+    const dataInicial = document.getElementById("produtosDataInicial").value;
+    const dataFinal = document.getElementById("produtosDataFinal").value;
+    const mensagem = document.getElementById("mensagemRelatorioProdutos");
+    if (!dataInicial || !dataFinal) {
+        alert("Informe a data inicial e a data final.");
+        return;
+    }
+    if (dataInicial > dataFinal) {
+        alert("A data inicial não pode ser maior que a data final.");
+        return;
+    }
+    mensagem.className = "info";
+    mensagem.textContent = "Consultando a aba ITENS_VENDAS...";
+    const callback = "receberRelatorioProdutos_" + Date.now();
+    const script = document.createElement("script");
+    window[callback] = function(resultado) {
+        try {
+            exibirRelatorioProdutos(resultado);
+        } finally {
+            try { delete window[callback]; } catch (e) {}
+            try { script.remove(); } catch (e) {}
+        }
+    };
+    script.src = URL_APPS_SCRIPT + "?acao=buscarRelatorioProdutos" +
+        "&dataInicial=" + encodeURIComponent(dataInicial) +
+        "&dataFinal=" + encodeURIComponent(dataFinal) +
+        "&idAparelho=" + encodeURIComponent(usuarioAtual.idAparelho) +
+        "&callback=" + encodeURIComponent(callback);
+    script.onerror = function() {
+        mensagem.className = "erro";
+        mensagem.textContent = "Não foi possível consultar os produtos vendidos.";
+        try { delete window[callback]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+    };
+    document.body.appendChild(script);
+}
+
+function exibirRelatorioProdutos(resultado) {
+    const mensagem = document.getElementById("mensagemRelatorioProdutos");
+    const resumo = document.getElementById("resumoRelatorioProdutos");
+    const lista = document.getElementById("listaRelatorioProdutos");
+    const botaoExcel = document.getElementById("botaoExportarProdutos");
+    const botaoImprimir = document.getElementById("botaoImprimirProdutos");
+    const graficos = document.getElementById("graficosRelatorioProdutos");
+    if (!resultado || !resultado.sucesso) {
+        ultimoRelatorioProdutos = null;
+        mensagem.className = "erro";
+        mensagem.textContent = resultado && resultado.mensagem
+            ? resultado.mensagem : "Não foi possível montar o relatório.";
+        resumo.classList.add("oculto");
+        lista.classList.add("oculto");
+        botaoExcel.classList.add("oculto");
+        botaoImprimir.classList.add("oculto");
+        graficos.classList.add("oculto");
+        return;
+    }
+    ultimoRelatorioProdutos = resultado;
+    const modelos = resultado.modelos || [];
+    const totais = resultado.totais || {};
+    mensagem.className = modelos.length ? "sucesso" : "info";
+    mensagem.textContent = modelos.length
+        ? modelos.length + (modelos.length === 1 ? " modelo encontrado." : " modelos encontrados.") +
+          (totais.ignorados ? " " + totais.ignorados + " registro(s) antigo(s) sem data não puderam ser associados." : "")
+        : "Nenhum produto vendido foi encontrado no período.";
+
+    const cartoes = [
+        ["Modelos diferentes", String(totais.modelos || 0)],
+        ["Unidades vendidas", formatarQuantidadeProduto_(totais.unidades || 0)],
+        ["Valor dos produtos", "R$ " + formatarMoeda(totais.valor || 0)]
+    ];
+    resumo.innerHTML = cartoes.map(function(cartao) {
+        return "<div class=\"cartao-relatorio\"><span>" + escaparHTML(cartao[0]) +
+            "</span><strong>" + escaparHTML(cartao[1]) + "</strong></div>";
+    }).join("");
+    resumo.classList.remove("oculto");
+    botaoExcel.classList.toggle("oculto", !modelos.length);
+    botaoImprimir.classList.toggle("oculto", !modelos.length);
+
+    const periodo = resultado.periodo || {};
+    document.getElementById("cabecalhoPeriodoProdutos").textContent =
+        "Período: " + formatarDataRelatorioProdutos_(periodo.dataInicial) +
+        " a " + formatarDataRelatorioProdutos_(periodo.dataFinal);
+
+    if (!modelos.length) {
+        lista.innerHTML = "";
+        lista.classList.add("oculto");
+        graficos.classList.add("oculto");
+        return;
+    }
+
+    graficos.classList.remove("oculto");
+    window.requestAnimationFrame(function() {
+        desenharGraficoBarrasProdutos_(modelos);
+        desenharGraficoPizzaProdutos_(modelos);
+    });
+
+    let html = "<table><thead><tr><th>Código</th><th>Modelo/bateria</th>" +
+        "<th>Unidades</th><th>Vendas</th><th>Valor médio</th><th>Total</th>" +
+        "<th>Detalhes</th></tr></thead><tbody>";
+    modelos.forEach(function(modelo) {
+        const detalhes = (modelo.detalhes || []).map(function(item) {
+            return escaparHTML(item.data) + " — Venda " + escaparHTML(item.numeroVenda || "-") +
+                " — Qtd. " + escaparHTML(formatarQuantidadeProduto_(item.quantidade)) +
+                " — R$ " + escaparHTML(formatarMoeda(item.subtotal));
+        }).join("<br>");
+        html += "<tr><td>" + escaparHTML(modelo.codigo || "") +
+            "</td><td>" + escaparHTML(modelo.produto || "") +
+            "</td><td>" + escaparHTML(formatarQuantidadeProduto_(modelo.quantidade)) +
+            "</td><td>" + escaparHTML(modelo.quantidadeVendas) +
+            "</td><td>R$ " + formatarMoeda(modelo.precoMedio) +
+            "</td><td>R$ " + formatarMoeda(modelo.valorTotal) +
+            "</td><td><details><summary>Ver vendas</summary><div class=\"pequeno\">" +
+            detalhes + "</div></details></td></tr>";
+    });
+    lista.innerHTML = html + "</tbody></table>";
+    lista.classList.remove("oculto");
+}
+
+function formatarDataRelatorioProdutos_(data) {
+    const partes = String(data || "").split("-");
+    return partes.length === 3 ? partes[2] + "/" + partes[1] + "/" + partes[0] : (data || "-");
+}
+
+function prepararCanvasProdutos_(id, altura) {
+    const canvas = document.getElementById(id);
+    const escala = Math.min(window.devicePixelRatio || 1, 2);
+    const largura = Math.max(canvas.clientWidth || 320, 260);
+    canvas.width = Math.round(largura * escala);
+    canvas.height = Math.round(altura * escala);
+    const contexto = canvas.getContext("2d");
+    contexto.setTransform(escala, 0, 0, escala, 0, 0);
+    contexto.clearRect(0, 0, largura, altura);
+    return { contexto: contexto, largura: largura, altura: altura };
+}
+
+function abreviarModeloProduto_(texto, limite) {
+    const valor = String(texto || "Sem descrição");
+    return valor.length > limite ? valor.slice(0, limite - 1) + "…" : valor;
+}
+
+function desenharGraficoBarrasProdutos_(modelos) {
+    const dados = (modelos || []).slice().sort(function(a, b) {
+        return (Number(b.quantidade) || 0) - (Number(a.quantidade) || 0);
+    }).slice(0, 10);
+    const area = prepararCanvasProdutos_("graficoBarrasProdutos", 300);
+    const ctx = area.contexto;
+    const margemEsquerda = Math.min(150, Math.max(100, area.largura * .34));
+    const margemDireita = 42;
+    const topo = 10;
+    const alturaLinha = Math.max(24, (area.altura - 20) / Math.max(dados.length, 1));
+    const maximo = Math.max.apply(null, dados.map(function(item) { return Number(item.quantidade) || 0; }).concat([1]));
+    ctx.font = "12px Arial";
+    ctx.textBaseline = "middle";
+    dados.forEach(function(item, indice) {
+        const quantidade = Number(item.quantidade) || 0;
+        const y = topo + indice * alturaLinha;
+        const alturaBarra = Math.min(17, alturaLinha - 6);
+        const larguraMaxima = Math.max(40, area.largura - margemEsquerda - margemDireita);
+        const larguraBarra = larguraMaxima * quantidade / maximo;
+        ctx.fillStyle = "#344054";
+        ctx.textAlign = "right";
+        ctx.fillText(abreviarModeloProduto_(item.produto || item.codigo, 22), margemEsquerda - 9, y + alturaBarra / 2);
+        const gradiente = ctx.createLinearGradient(margemEsquerda, 0, margemEsquerda + larguraBarra, 0);
+        gradiente.addColorStop(0, "#c99a2e");
+        gradiente.addColorStop(1, "#e2b84f");
+        ctx.fillStyle = gradiente;
+        ctx.fillRect(margemEsquerda, y, larguraBarra, alturaBarra);
+        ctx.fillStyle = "#101828";
+        ctx.textAlign = "left";
+        ctx.fillText(formatarQuantidadeProduto_(quantidade), margemEsquerda + larguraBarra + 6, y + alturaBarra / 2);
+    });
+}
+
+function desenharGraficoPizzaProdutos_(modelos) {
+    const cores = ["#c99a2e", "#263c5b", "#d95f59", "#4f9d69", "#7a5af8", "#2e90a6", "#98a2b3"];
+    const ordenados = (modelos || []).slice().sort(function(a, b) { return (Number(b.quantidade) || 0) - (Number(a.quantidade) || 0); });
+    const dados = ordenados.slice(0, 6).map(function(item) {
+        return { nome: item.produto || item.codigo || "Sem descrição", valor: Number(item.quantidade) || 0 };
+    });
+    if (ordenados.length > 6) {
+        dados.push({ nome: "Outros modelos", valor: ordenados.slice(6).reduce(function(total, item) { return total + (Number(item.quantidade) || 0); }, 0) });
+    }
+    const total = dados.reduce(function(soma, item) { return soma + item.valor; }, 0) || 1;
+    const area = prepararCanvasProdutos_("graficoPizzaProdutos", 220);
+    const ctx = area.contexto;
+    const raio = Math.min(area.largura, area.altura) * .34;
+    const centroX = area.largura / 2;
+    const centroY = area.altura / 2;
+    let angulo = -Math.PI / 2;
+    dados.forEach(function(item, indice) {
+        const proximo = angulo + Math.PI * 2 * item.valor / total;
+        ctx.beginPath(); ctx.arc(centroX, centroY, raio, angulo, proximo); ctx.arc(centroX, centroY, raio * .56, proximo, angulo, true); ctx.closePath();
+        ctx.fillStyle = cores[indice % cores.length]; ctx.fill();
+        angulo = proximo;
+    });
+    ctx.fillStyle = "#101828"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 21px Arial";
+    ctx.fillText(formatarQuantidadeProduto_(total), centroX, centroY - 8);
+    ctx.fillStyle = "#667085"; ctx.font = "11px Arial"; ctx.fillText("unidades", centroX, centroY + 13);
+    document.getElementById("legendaGraficoProdutos").innerHTML = dados.map(function(item, indice) {
+        const percentual = total ? (item.valor * 100 / total).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : "0";
+        return "<div class=\"item-legenda-produtos\"><span><i class=\"cor-legenda-produtos\" style=\"background:" + cores[indice % cores.length] + "\"></i>" + escaparHTML(abreviarModeloProduto_(item.nome, 28)) + "</span><strong>" + percentual + "%</strong></div>";
+    }).join("");
+}
+
+function imprimirRelatorioProdutos() {
+    if (!ultimoRelatorioProdutos || !(ultimoRelatorioProdutos.modelos || []).length) {
+        alert("Consulte primeiro os produtos vendidos.");
+        return;
+    }
+    desenharGraficoBarrasProdutos_(ultimoRelatorioProdutos.modelos);
+    desenharGraficoPizzaProdutos_(ultimoRelatorioProdutos.modelos);
+    document.body.classList.add("imprimindo-relatorio-produtos");
+    const limpar = function() { document.body.classList.remove("imprimindo-relatorio-produtos"); };
+    window.addEventListener("afterprint", limpar, { once: true });
+    window.print();
+    window.setTimeout(limpar, 1500);
+}
+
+function formatarQuantidadeProduto_(valor) {
+    const numero = Number(valor) || 0;
+    return Number.isInteger(numero)
+        ? String(numero)
+        : numero.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+function baixarRelatorioProdutos() {
+    if (!ultimoRelatorioProdutos || !(ultimoRelatorioProdutos.modelos || []).length) {
+        alert("Consulte primeiro os produtos vendidos.");
+        return;
+    }
+    if (typeof XLSX === "undefined") {
+        alert("Não foi possível carregar o gerador da planilha.");
+        return;
+    }
+    const periodo = ultimoRelatorioProdutos.periodo || {};
+    const cabecalho = [
+        ["C GOMES BATERIAS"],
+        ["Av. Roberto Camelier, 652 - Jurunas — Entre Caripunas e Timbiras"],
+        ["Telefone: (91) 98162-3687"],
+        ["RELATÓRIO DE BATERIAS VENDIDAS"],
+        ["Período: " + formatarDataRelatorioProdutos_(periodo.dataInicial) + " a " + formatarDataRelatorioProdutos_(periodo.dataFinal)],
+        []
+    ];
+    const resumoLinhas = cabecalho.concat([[
+        "Código", "Modelo/bateria", "Quantidade vendida", "Quantidade de vendas",
+        "Valor médio unitário", "Valor total"
+    ]]);
+    const detalheLinhas = cabecalho.concat([[
+        "Data", "Número da venda", "Código", "Modelo/bateria", "Quantidade",
+        "Valor unitário", "Subtotal"
+    ]]);
+    ultimoRelatorioProdutos.modelos.forEach(function(modelo) {
+        resumoLinhas.push([
+            modelo.codigo || "", modelo.produto || "", Number(modelo.quantidade) || 0,
+            Number(modelo.quantidadeVendas) || 0, Number(modelo.precoMedio) || 0,
+            Number(modelo.valorTotal) || 0
+        ]);
+        (modelo.detalhes || []).forEach(function(item) {
+            detalheLinhas.push([
+                item.data || "", item.numeroVenda || "", modelo.codigo || "", modelo.produto || "",
+                Number(item.quantidade) || 0, Number(item.preco) || 0, Number(item.subtotal) || 0
+            ]);
+        });
+    });
+    const arquivo = XLSX.utils.book_new();
+    const abaResumo = XLSX.utils.aoa_to_sheet(resumoLinhas);
+    const abaDetalhes = XLSX.utils.aoa_to_sheet(detalheLinhas);
+    abaResumo["!cols"] = [{wch:16},{wch:42},{wch:18},{wch:18},{wch:20},{wch:16}];
+    abaDetalhes["!cols"] = [{wch:12},{wch:18},{wch:16},{wch:42},{wch:12},{wch:18},{wch:16}];
+    abaResumo["!merges"] = [0,1,2,3,4].map(function(linha) { return { s:{r:linha,c:0}, e:{r:linha,c:5} }; });
+    abaDetalhes["!merges"] = [0,1,2,3,4].map(function(linha) { return { s:{r:linha,c:0}, e:{r:linha,c:6} }; });
+    XLSX.utils.book_append_sheet(arquivo, abaResumo, "Resumo por modelo");
+    XLSX.utils.book_append_sheet(arquivo, abaDetalhes, "Vendas detalhadas");
+    const nome = "baterias_vendidas_" +
+        String(periodo.dataInicial || "inicio").replace(/-/g, "") + "_a_" +
+        String(periodo.dataFinal || "fim").replace(/-/g, "") + ".xlsx";
+    XLSX.writeFile(arquivo, nome);
 }
 
 function carregarRelatorio() {
