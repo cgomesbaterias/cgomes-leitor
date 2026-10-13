@@ -172,7 +172,7 @@ button {
 .conteudo-relatorio-produtos { padding: 18px; }
 .filtros-relatorio-produtos, .acoes-relatorio-produtos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .acoes-relatorio-produtos button { margin-top: 10px; }
-.grade-graficos-produtos { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr); gap: 14px; margin-top: 18px; }
+.grade-graficos-produtos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 18px; }
 .cartao-grafico-produtos { min-width: 0; padding: 16px; background: #fff; border: 1px solid #e2e6ea; border-radius: 12px; box-shadow: 0 3px 12px rgba(16, 24, 40, .06); }
 .cartao-grafico-produtos h3 { margin: 0 0 12px; font-size: 16px; color: #263c5b; }
 .cartao-grafico-produtos canvas { display: block; width: 100%; height: 300px; }
@@ -194,13 +194,20 @@ button {
     body.imprimindo-relatorio-produtos #areaRelatorioProdutos,
     body.imprimindo-relatorio-produtos #areaRelatorioProdutos * { visibility: visible; }
     body.imprimindo-relatorio-produtos #areaRelatorioProdutos { position: absolute; left: 0; top: 0; width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; background: #fff; }
-    body.imprimindo-relatorio-produtos .conteudo-relatorio-produtos { padding: 12mm; }
-    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos { color: #111; background: #fff; border-bottom: 3px solid #c99a2e; }
+    body.imprimindo-relatorio-produtos .conteudo-relatorio-produtos { padding: 5mm; }
+    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos { padding: 5mm; color: #111; background: #fff; border-bottom: 3px solid #c99a2e; break-after: avoid-page; page-break-after: avoid; }
+    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos img { width: 76px; max-height: 58px; }
+    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos h2 { font-size: 18px; }
+    body.imprimindo-relatorio-produtos .cabecalho-relatorio-produtos p { margin: 1px 0; font-size: 10px; }
     body.imprimindo-relatorio-produtos .filtros-relatorio-produtos,
     body.imprimindo-relatorio-produtos .acoes-relatorio-produtos,
     body.imprimindo-relatorio-produtos #mensagemRelatorioProdutos,
     body.imprimindo-relatorio-produtos details { display: none !important; }
-    body.imprimindo-relatorio-produtos .grade-graficos-produtos { grid-template-columns: 1.35fr .85fr; break-inside: avoid; }
+    body.imprimindo-relatorio-produtos #resumoRelatorioProdutos { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 3mm; break-after: avoid-page; page-break-after: avoid; }
+    body.imprimindo-relatorio-produtos .cartao-relatorio { padding: 7px; }
+    body.imprimindo-relatorio-produtos .grade-graficos-produtos { display: block; margin-top: 3mm; }
+    body.imprimindo-relatorio-produtos .cartao-grafico-produtos { margin-bottom: 5mm; break-inside: avoid-page; page-break-inside: avoid; }
+    body.imprimindo-relatorio-produtos .cartao-grafico-produtos:first-child { break-before: avoid-page; page-break-before: avoid; }
     body.imprimindo-relatorio-produtos .tabela-relatorio { overflow: visible; }
     body.imprimindo-relatorio-produtos .tabela-relatorio table { font-size: 10px; }
     body.imprimindo-relatorio-produtos .tabela-relatorio th,
@@ -3872,6 +3879,7 @@ function prepararCanvasProdutos_(id, altura) {
     const largura = Math.max(canvas.clientWidth || 320, 260);
     canvas.width = Math.round(largura * escala);
     canvas.height = Math.round(altura * escala);
+    canvas.style.height = altura + "px";
     const contexto = canvas.getContext("2d");
     contexto.setTransform(escala, 0, 0, escala, 0, 0);
     contexto.clearRect(0, 0, largura, altura);
@@ -3887,33 +3895,67 @@ function desenharGraficoBarrasProdutos_(modelos) {
     const dados = (modelos || []).slice().sort(function(a, b) {
         return (Number(b.quantidade) || 0) - (Number(a.quantidade) || 0);
     }).slice(0, 10);
-    const area = prepararCanvasProdutos_("graficoBarrasProdutos", 300);
+    const canvas = document.getElementById("graficoBarrasProdutos");
+    const larguraDisponivel = Math.max(canvas.clientWidth || 320, 260);
+    const maximoCaracteres = larguraDisponivel < 480 ? 24 : (larguraDisponivel < 720 ? 34 : 48);
+    const rotulos = dados.map(function(item) {
+        return quebrarRotuloGraficoProdutos_(item.produto || item.codigo || "Sem descrição", maximoCaracteres);
+    });
+    const alturas = rotulos.map(function(linhas) { return Math.max(34, linhas.length * 14 + 12); });
+    const alturaTotal = Math.max(300, alturas.reduce(function(total, altura) { return total + altura; }, 0) + 18);
+    const area = prepararCanvasProdutos_("graficoBarrasProdutos", alturaTotal);
     const ctx = area.contexto;
-    const margemEsquerda = Math.min(150, Math.max(100, area.largura * .34));
+    const margemEsquerda = Math.min(340, Math.max(150, area.largura * .43));
     const margemDireita = 42;
-    const topo = 10;
-    const alturaLinha = Math.max(24, (area.altura - 20) / Math.max(dados.length, 1));
+    let yAtual = 9;
     const maximo = Math.max.apply(null, dados.map(function(item) { return Number(item.quantidade) || 0; }).concat([1]));
     ctx.font = "12px Arial";
     ctx.textBaseline = "middle";
     dados.forEach(function(item, indice) {
         const quantidade = Number(item.quantidade) || 0;
-        const y = topo + indice * alturaLinha;
-        const alturaBarra = Math.min(17, alturaLinha - 6);
+        const alturaLinha = alturas[indice];
+        const y = yAtual;
+        const alturaBarra = 18;
         const larguraMaxima = Math.max(40, area.largura - margemEsquerda - margemDireita);
         const larguraBarra = larguraMaxima * quantidade / maximo;
         ctx.fillStyle = "#344054";
         ctx.textAlign = "right";
-        ctx.fillText(abreviarModeloProduto_(item.produto || item.codigo, 22), margemEsquerda - 9, y + alturaBarra / 2);
+        const linhas = rotulos[indice];
+        const inicioRotulo = y + alturaLinha / 2 - ((linhas.length - 1) * 14 / 2);
+        linhas.forEach(function(linha, numeroLinha) {
+            ctx.fillText(linha, margemEsquerda - 10, inicioRotulo + numeroLinha * 14);
+        });
         const gradiente = ctx.createLinearGradient(margemEsquerda, 0, margemEsquerda + larguraBarra, 0);
         gradiente.addColorStop(0, "#c99a2e");
         gradiente.addColorStop(1, "#e2b84f");
         ctx.fillStyle = gradiente;
-        ctx.fillRect(margemEsquerda, y, larguraBarra, alturaBarra);
+        const yBarra = y + alturaLinha / 2 - alturaBarra / 2;
+        ctx.fillRect(margemEsquerda, yBarra, larguraBarra, alturaBarra);
         ctx.fillStyle = "#101828";
         ctx.textAlign = "left";
-        ctx.fillText(formatarQuantidadeProduto_(quantidade), margemEsquerda + larguraBarra + 6, y + alturaBarra / 2);
+        ctx.fillText(formatarQuantidadeProduto_(quantidade), margemEsquerda + larguraBarra + 6, y + alturaLinha / 2);
+        yAtual += alturaLinha;
     });
+}
+
+function quebrarRotuloGraficoProdutos_(texto, limite) {
+    const palavras = String(texto || "Sem descrição").trim().split(/\s+/);
+    const linhas = [];
+    let linha = "";
+    palavras.forEach(function(palavra) {
+        if (palavra.length > limite) {
+            if (linha) { linhas.push(linha); linha = ""; }
+            for (let posicao = 0; posicao < palavra.length; posicao += limite) {
+                linhas.push(palavra.slice(posicao, posicao + limite));
+            }
+            return;
+        }
+        const candidata = linha ? linha + " " + palavra : palavra;
+        if (candidata.length <= limite) linha = candidata;
+        else { if (linha) linhas.push(linha); linha = palavra; }
+    });
+    if (linha) linhas.push(linha);
+    return linhas.length ? linhas : ["Sem descrição"];
 }
 
 function desenharGraficoPizzaProdutos_(modelos) {
@@ -3952,9 +3994,9 @@ function imprimirRelatorioProdutos() {
         alert("Consulte primeiro os produtos vendidos.");
         return;
     }
+    document.body.classList.add("imprimindo-relatorio-produtos");
     desenharGraficoBarrasProdutos_(ultimoRelatorioProdutos.modelos);
     desenharGraficoPizzaProdutos_(ultimoRelatorioProdutos.modelos);
-    document.body.classList.add("imprimindo-relatorio-produtos");
     const limpar = function() { document.body.classList.remove("imprimindo-relatorio-produtos"); };
     window.addEventListener("afterprint", limpar, { once: true });
     window.print();
