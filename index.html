@@ -927,8 +927,11 @@ Sistema de vendas
                 step="0.01"
                 min="0.01"
                 inputmode="decimal"
-                placeholder="0,00">
+                placeholder="0,00"
+                oninput="atualizarPreviaMoraFiado()">
         </div>
+
+        <div id="avisoMoraFiado" class="info oculto" style="padding:12px; margin-bottom:12px;"></div>
 
         <div class="campo">
             <label for="formaRecebimentoFiado">Forma de pagamento</label>
@@ -3403,10 +3406,12 @@ function exibirHistoricoCliente_(resultado) {
     html += "<h3>Pagamentos de FIADO</h3>";
     if (!recebimentos.length) html += "<p>Nenhum pagamento identificado.</p>";
     else {
-        html += "<table><thead><tr><th>Data</th><th>Venda</th><th>Valor</th><th>Forma</th><th>Situação</th></tr></thead><tbody>";
+        html += "<table><thead><tr><th>Data</th><th>Venda</th><th>Recebido</th><th>Principal</th><th>Mora</th><th>Forma</th><th>Situação</th></tr></thead><tbody>";
         recebimentos.forEach(function(r) {
             html += "<tr><td>" + escaparHTML(r.data) + "</td><td>" + escaparHTML(r.numeroVenda) +
-                "</td><td>R$ " + formatarMoeda(r.valor) + "</td><td>" + escaparHTML(r.forma) +
+                "</td><td>R$ " + formatarMoeda(r.valor) +
+                "</td><td>R$ " + formatarMoeda(r.valorPrincipal == null ? r.valor : r.valorPrincipal) +
+                "</td><td>R$ " + formatarMoeda(r.mora || 0) + "</td><td>" + escaparHTML(r.forma) +
                 "</td><td>" + escaparHTML(r.situacao) + "</td></tr>";
         });
         html += "</tbody></table>";
@@ -3561,7 +3566,7 @@ function exibirFiados(resultado) {
 
     let htmlHistorico = "<h3>🧾 Histórico de recebimentos</h3>" +
         "<table><thead><tr><th>Data/hora</th><th>Cliente</th><th>Venda</th>" +
-        "<th>Valor</th><th>Forma</th><th>Recebido por</th><th>Situação</th>" +
+        "<th>Recebido</th><th>Principal</th><th>Mora</th><th>Forma</th><th>Recebido por</th><th>Situação</th>" +
         "<th>Ação</th></tr></thead><tbody>";
 
     recebimentos.forEach(function(recebimento) {
@@ -3574,6 +3579,8 @@ function exibirFiados(resultado) {
             "</td><td>" + escaparHTML(recebimento.cliente) +
             "</td><td>" + escaparHTML(recebimento.idVenda) +
             "</td><td>R$ " + formatarMoeda(recebimento.valor) +
+            "</td><td>R$ " + formatarMoeda(recebimento.valorPrincipal == null ? recebimento.valor : recebimento.valorPrincipal) +
+            "</td><td>R$ " + formatarMoeda(recebimento.mora || 0) +
             "</td><td>" + escaparHTML(recebimento.formaPagamento) +
             "</td><td>" + escaparHTML(recebimento.usuarioRecebeu) +
             "</td><td>" + escaparHTML(recebimento.situacao) +
@@ -3591,6 +3598,7 @@ function pagarFiado(idFiado, saldo) {
     document.getElementById("saldoPagamentoFiado").value =
         "R$ " + formatarMoeda(pagamentoFiadoAtual.saldo);
     document.getElementById("valorRecebimentoFiado").value = "";
+    atualizarPreviaMoraFiado();
     document.getElementById("formaRecebimentoFiado").value = "";
     document.getElementById("formPagamentoFiado").classList.remove("oculto");
     document.getElementById("formPagamentoFiado").scrollIntoView({ behavior: "smooth" });
@@ -3602,6 +3610,20 @@ function cancelarPagamentoFiado() {
     document.getElementById("formPagamentoFiado").classList.add("oculto");
 }
 
+function atualizarPreviaMoraFiado() {
+    const aviso = document.getElementById("avisoMoraFiado");
+    if (!aviso) return;
+    const valor = Number(document.getElementById("valorRecebimentoFiado").value) || 0;
+    const saldo = pagamentoFiadoAtual ? Number(pagamentoFiadoAtual.saldo) || 0 : 0;
+    const mora = Math.max(0, valor - saldo);
+    aviso.classList.toggle("oculto", !(mora > 0));
+    aviso.innerHTML = mora > 0
+        ? "O saldo principal será quitado em <strong>R$ " + formatarMoeda(saldo) +
+          "</strong> e o excedente de <strong>R$ " + formatarMoeda(mora) +
+          "</strong> será registrado como MORA."
+        : "";
+}
+
 function confirmarPagamentoFiado() {
     if (!pagamentoFiadoAtual) {
         alert("Selecione um FIADO para registrar o pagamento.");
@@ -3611,10 +3633,16 @@ function confirmarPagamentoFiado() {
     const valor = Number(document.getElementById("valorRecebimentoFiado").value);
     const formaPagamento = document.getElementById("formaRecebimentoFiado").value;
 
-    if (!(valor > 0) || valor > pagamentoFiadoAtual.saldo + 0.005) {
-        alert("Informe um valor válido, limitado ao saldo do FIADO.");
+    if (!(valor > 0)) {
+        alert("Informe um valor válido.");
         return;
     }
+
+    const mora = Math.max(0, valor - pagamentoFiadoAtual.saldo);
+    if (mora > 0.005 && !confirm(
+        "O valor recebido excede o saldo em R$ " + formatarMoeda(mora) +
+        ". Essa diferença será registrada como MORA. Confirma o recebimento?"
+    )) return;
 
     if (!formaPagamento) {
         alert("Selecione a forma de pagamento.");
@@ -3631,7 +3659,7 @@ function confirmarPagamentoFiado() {
     window[callback] = function(resultado) {
         try {
             alert(resultado && resultado.sucesso
-                ? "✅ Pagamento registrado com sucesso."
+                ? "✅ " + (resultado.mensagem || "Pagamento registrado com sucesso.")
                 : "❌ " + (resultado && resultado.mensagem ? resultado.mensagem : "Erro ao registrar."));
             if (resultado && resultado.sucesso) {
                 cancelarPagamentoFiado();
