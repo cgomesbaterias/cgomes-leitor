@@ -1311,7 +1311,7 @@ Sistema de vendas
             <div class="campo"><label>Cidade *</label><input id="fiscalCidade" type="text"></div>
             <div class="campo"><label>UF *</label><input id="fiscalUf" type="text" maxlength="2"></div>
             <div class="campo"><label>E-mail (opcional)</label><input id="fiscalEmail" type="email"></div>
-            <div class="campo"><label>Celular com DDD *</label><input id="fiscalCelular" type="tel" inputmode="numeric" maxlength="14" placeholder="(91) 999999999" oninput="formatarCelularFiscal(this)"></div>
+            <div class="campo"><label>Celular com DDD (opcional)</label><input id="fiscalCelular" type="tel" inputmode="numeric" maxlength="14" placeholder="(91) 999999999" oninput="formatarCelularFiscal(this)"></div>
         </div>
     </div>
 
@@ -5372,7 +5372,10 @@ function obterDadosClienteFiscal_() {
         alert("O e-mail informado não é válido. Corrija-o ou deixe o campo em branco.");
         return false;
     }
-    if (dados.celular.length !== 11) { alert("Informe o celular no formato (XX) XXXXXXXXX."); return false; }
+    if (dados.celular && dados.celular.length !== 11) {
+        alert("O celular informado deve estar no formato (XX) XXXXXXXXX. Corrija-o ou deixe o campo em branco.");
+        return false;
+    }
     return dados;
 }
 
