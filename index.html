@@ -3511,52 +3511,61 @@ function exibirFiados(resultado) {
         return;
     }
 
-    const fiados = resultado.fiados || [];
-    const totais = resultado.totais || { original: 0, pago: 0, saldo: 0 };
+    const todosFiados = resultado.fiados || [];
+    const fiados = todosFiados.filter(function(fiado) {
+        return Number(fiado.saldo) > 0.005;
+    });
+    const totaisPendentes = fiados.reduce(function(totais, fiado) {
+        totais.original += Number(fiado.original) || 0;
+        totais.pago += Number(fiado.pago) || 0;
+        totais.saldo += Number(fiado.saldo) || 0;
+        return totais;
+    }, { original: 0, pago: 0, saldo: 0 });
     mensagem.className = fiados.length ? "sucesso" : "info";
     mensagem.textContent = fiados.length
-        ? fiados.length + " registro(s) encontrado(s)."
-        : "Nenhum FIADO encontrado.";
+        ? fiados.length + (fiados.length === 1 ? " pendência encontrada." : " pendências encontradas.")
+        : "Nenhuma pendência de FIADO. Todas as vendas estão quitadas.";
 
     resumo.innerHTML = [
-        ["Valor original", totais.original],
-        ["Valor pago", totais.pago],
-        ["Saldo a receber", totais.saldo]
+        ["Vendas pendentes", fiados.length, false],
+        ["Valor original pendente", totaisPendentes.original, true],
+        ["Já pago nessas vendas", totaisPendentes.pago, true],
+        ["Saldo a receber", totaisPendentes.saldo, true]
     ].map(function(item) {
         return "<div class=\"cartao-relatorio\"><span>" +
-            escaparHTML(item[0]) + "</span><strong>R$ " +
-            formatarMoeda(item[1]) + "</strong></div>";
+            escaparHTML(item[0]) + "</span><strong>" +
+            (item[2] ? "R$ " + formatarMoeda(item[1]) : escaparHTML(item[1])) +
+            "</strong></div>";
     }).join("");
     resumo.classList.remove("oculto");
 
     if (!fiados.length) {
+        lista.innerHTML = "";
         lista.classList.add("oculto");
-        historico.classList.add("oculto");
-        return;
+    } else {
+        let html = "<table><thead><tr><th>Cliente</th><th>Telefone</th>" +
+            "<th>Venda</th><th>Vencimento</th><th>Original</th><th>Pago</th>" +
+            "<th>Saldo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>";
+
+        fiados.forEach(function(fiado) {
+            const botao = resultado.acessoTotal
+                ? "<button class=\"botao-adicionar\" style=\"min-width:150px\" " +
+                  "onclick=\"pagarFiado('" + escaparHTML(fiado.id) + "'," + fiado.saldo + ")\">" +
+                  "💵 Registrar pagamento</button>"
+                : "—";
+            html += "<tr><td>" + escaparHTML(fiado.cliente) +
+                "</td><td>" + escaparHTML(fiado.telefone || "") +
+                "</td><td>" + escaparHTML(fiado.numeroVenda) +
+                "</td><td>" + escaparHTML(fiado.vencimento) +
+                "</td><td>R$ " + formatarMoeda(fiado.original) +
+                "</td><td>R$ " + formatarMoeda(fiado.pago) +
+                "</td><td>R$ " + formatarMoeda(fiado.saldo) +
+                "</td><td>" + escaparHTML(fiado.situacao) +
+                "</td><td>" + botao + "</td></tr>";
+        });
+        lista.innerHTML = html + "</tbody></table>";
+        lista.classList.remove("oculto");
     }
-
-    let html = "<table><thead><tr><th>Cliente</th><th>Telefone</th>" +
-        "<th>Venda</th><th>Vencimento</th><th>Original</th><th>Pago</th>" +
-        "<th>Saldo</th><th>Situação</th><th>Ação</th></tr></thead><tbody>";
-
-    fiados.forEach(function(fiado) {
-        const botao = resultado.acessoTotal && fiado.saldo > 0
-            ? "<button class=\"botao-adicionar\" style=\"min-width:150px\" " +
-              "onclick=\"pagarFiado('" + escaparHTML(fiado.id) + "'," + fiado.saldo + ")\">" +
-              "💵 Registrar pagamento</button>"
-            : "—";
-        html += "<tr><td>" + escaparHTML(fiado.cliente) +
-            "</td><td>" + escaparHTML(fiado.telefone || "") +
-            "</td><td>" + escaparHTML(fiado.numeroVenda) +
-            "</td><td>" + escaparHTML(fiado.vencimento) +
-            "</td><td>R$ " + formatarMoeda(fiado.original) +
-            "</td><td>R$ " + formatarMoeda(fiado.pago) +
-            "</td><td>R$ " + formatarMoeda(fiado.saldo) +
-            "</td><td>" + escaparHTML(fiado.situacao) +
-            "</td><td>" + botao + "</td></tr>";
-    });
-    lista.innerHTML = html + "</tbody></table>";
-    lista.classList.remove("oculto");
 
     const recebimentos = resultado.recebimentos || [];
     if (!recebimentos.length) {
