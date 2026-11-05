@@ -4407,6 +4407,10 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
     ];
 
     const linhas = [cabecalhos];
+    const linhasComissoes = [[
+        "Número pedido Bling", "Venda CGomes", "Data", "Vendedor",
+        "Total da venda", "Valor da comissão", "Percentual da comissão"
+    ]];
     let vendasSemItens = 0;
     let vendasPagamentoMisto = 0;
     let vendasIgnoradas = 0;
@@ -4432,6 +4436,20 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
         const pagamento = formaPagamentoBling_(venda);
         const observacoes = observacoesBling_(venda);
         if (quantidadeFormas > 1) vendasPagamentoMisto++;
+
+        const totalVenda = Number(venda.totalVenda) || 0;
+        const comissao = Number(venda.comissao) || 0;
+        if (comissao > 0) {
+            linhasComissoes.push([
+                numeroPedido,
+                String(venda.numero || ""),
+                data,
+                venda.usuario || "",
+                totalVenda,
+                comissao,
+                totalVenda > 0 ? comissao / totalVenda : 0
+            ]);
+        }
 
         itens.forEach(function(item) {
             linhas.push([
@@ -4466,6 +4484,22 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
 
     const arquivo = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(arquivo, planilha, "modelo_pedido_venda");
+    const abaComissoes = XLSX.utils.aoa_to_sheet(linhasComissoes);
+    abaComissoes["!cols"] = [
+        { wch: 20 }, { wch: 16 }, { wch: 13 }, { wch: 24 },
+        { wch: 18 }, { wch: 20 }, { wch: 24 }
+    ];
+    for (let linhaComissao = 2; linhaComissao <= linhasComissoes.length; linhaComissao++) {
+        ["E", "F"].forEach(function(coluna) {
+            if (abaComissoes[coluna + linhaComissao]) {
+                abaComissoes[coluna + linhaComissao].z = "R$ #,##0.00";
+            }
+        });
+        if (abaComissoes["G" + linhaComissao]) {
+            abaComissoes["G" + linhaComissao].z = "0.0000%";
+        }
+    }
+    XLSX.utils.book_append_sheet(arquivo, abaComissoes, "Controle de comissões");
     const periodo = ultimoRelatorioVendas.periodo || {};
     const nome = "vendas_bling_" +
         String(periodo.dataInicial || "inicio").replace(/-/g, "") + "_a_" +
@@ -4503,7 +4537,7 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
               ? " a " + resultadoNumeracao.ultimoNovo
               : "") + "."
         : " A numeração já reservada para essas vendas foi mantida.";
-    alert("Planilha gerada." + faixaNova +
+    alert("Planilha gerada. A primeira aba é para importar no Bling; a segunda aba contém o controle interno de comissões." + faixaNova +
         (avisos.length ? " Atenção: " + avisos.join("; ") + "." : ""));
 }
 
