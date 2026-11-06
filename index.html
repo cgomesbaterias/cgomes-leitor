@@ -4435,6 +4435,10 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
         const quantidadeFormas = quantidadeFormasPagamentoBling_(venda);
         const pagamento = formaPagamentoBling_(venda);
         const observacoes = observacoesBling_(venda);
+        const possuiFrete = Number(venda.frete) > 0;
+        const transportadora = possuiFrete ? String(venda.entregador || "").trim() : "";
+        // O importador do Bling usa D para 1-FOB e S para 9-Sem transporte.
+        const tipoFreteBling = possuiFrete ? "D" : "S";
         if (quantidadeFormas > 1) vendasPagamentoMisto++;
 
         const totalVenda = Number(venda.totalVenda) || 0;
@@ -4460,7 +4464,7 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
                 Number(item.quantidade) || 0, Number(item.preco) || 0,
                 Number(item.subtotal) || 0, Number(venda.totalVenda) || 0,
                 Number(venda.frete) || 0, 0, 0, "", "", "", "", "", "", "", "",
-                "", "", (Number(venda.frete) > 0 ? "R" : "S"), observacoes,
+                transportadora, "", tipoFreteBling, observacoes,
                 (quantidadeFormas === 1 ? 1 : ""), "", venda.usuario || "", pagamento, ""
             ]);
         });
