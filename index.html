@@ -4434,6 +4434,15 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
         const numeroPedido = String(venda.numeroPedidoBling || "");
         const quantidadeFormas = quantidadeFormasPagamentoBling_(venda);
         const pagamento = formaPagamentoBling_(venda);
+        let condicaoPagamentoBling = "";
+        if (quantidadeFormas === 1) {
+            if (Number(venda.propig) > 0 || Number(venda.permuta) > 0 ||
+                Number(venda.dinheiro) > 0 || Number(venda.pix) > 0) {
+                condicaoPagamentoBling = 0;
+            } else if (Number(venda.fiado) > 0 || Number(venda.boleto) > 0) {
+                condicaoPagamentoBling = 30;
+            }
+        }
         const observacoes = observacoesBling_(venda);
         const possuiFrete = Number(venda.frete) > 0;
         const transportadora = possuiFrete ? String(venda.entregador || "").trim() : "";
@@ -4465,7 +4474,7 @@ function gerarPlanilhaBling_(resultadoNumeracao) {
                 Number(item.subtotal) || 0, Number(venda.totalVenda) || 0,
                 Number(venda.frete) || 0, 0, 0, "", "", "", "", "", "", "", "",
                 transportadora, "", tipoFreteBling, observacoes,
-                (quantidadeFormas === 1 ? 1 : ""), "", venda.usuario || "", pagamento, ""
+                condicaoPagamentoBling, "", venda.usuario || "", pagamento, ""
             ]);
         });
     });
